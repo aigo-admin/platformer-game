@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monochrome Echo - Precision Platformer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        monoBg: '#0a0a0a',
+                        monoCard: '#141414',
+                        monoBorder: '#262626',
+                        monoText: '#e5e5e5',
+                        monoDim: '#737373',
+                        monoGlow: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #e5e5e5;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+        }
+        .glow-text {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+        .glow-box {
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen relative bg-monoBg text-monoText">
+
+    <!-- Canvas Element -->
+    <canvas id="gameCanvas" class="absolute inset-0 z-0"></canvas>
+
+    <!-- Overlay UI Layer -->
+    <div id="uiLayer" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
+        
+        <!-- HUD (Visible during gameplay) -->
+        <div id="hud" class="flex justify-between items-center w-full pointer-events-auto opacity-0 transition-opacity duration-300">
+            <div class="flex items-center gap-4 bg-monoCard/80 backdrop-blur border border-monoBorder px-4 py-2 rounded-xl shadow-lg">
+                <button onclick="openPauseMenu()" class="text-monoText hover:text-white transition p-1 hover:bg-white/10 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="flex flex-col">
+                    <span id="hudLevelName" class="text-xs font-mono text-monoDim uppercase tracking-wider">Level 1</span>
+                    <span id="hudLevelNum" class="text-lg font-bold tracking-tight">Awakening</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 bg-monoCard/80 backdrop-blur border border-monoBorder px-5 py-2 rounded-xl shadow-lg font-mono text-sm">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-monoDim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="hudTimer">00:00.000</span>
+                </div>
+                <div class="w-px h-4 bg-monoBorder"></div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-monoDim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span id="hudDeaths">0 Deaths</span>
+                </div>
+                <div class="w-px h-4 bg-monoBorder"></div>
+                <button id="btnMute" onclick="toggleAudioMute()" class="text-monoDim hover:text-white transition">
+                    <svg id="iconSoundOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M17.95 6.05a8 8 0 010 11.314M11 5L6 9H2v6h4l5 4V5z"></path></svg>
+                    <svg id="iconSoundOff" class="w-5 h-5 hidden text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls (Mobile) -->
+        <div id="mobileControls" class="hidden pointer-events-auto flex justify-between items-end w-full pb-4 px-2">
+            <div class="flex gap-3">
+                <button id="btnTouchLeft" class="w-16 h-16 bg-white/10 active:bg-white/30 backdrop-blur rounded-2xl border border-white/20 flex items-center justify-center text-2xl">←</button>
+                <button id="btnTouchRight" class="w-16 h-16 bg-white/10 active:bg-white/30 backdrop-blur rounded-2xl border border-white/20 flex items-center justify-center text-2xl">→</button>
+            </div>
+            <div class="flex gap-3">
+                <button id="btnTouchDash" class="w-16 h-16 bg-white/10 active:bg-white/30 backdrop-blur rounded-2xl border border-white/20 flex items-center justify-center text-xs font-bold">DASH</button>
+                <button id="btnTouchJump" class="w-20 h-20 bg-white/20 active:bg-white/40 backdrop-blur rounded-full border border-white/30 flex items-center justify-center text-xl font-bold">JUMP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Menus Layer -->
+    <div id="menuLayer" class="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+        
+        <!-- MAIN MENU -->
+        <div id="menuMain" class="flex flex-col items-center text-center max-w-md w-full animate-fadeIn">
+            <div class="mb-2 inline-block px-3 py-1 rounded-full border border-white/20 text-xs font-mono tracking-widest text-monoDim uppercase bg-white/5">
+                Precision Platformer v3.0 (Parallax & Editor)
+            </div>
+            <h1 class="text-5xl md:text-6xl font-extrabold tracking-tighter mb-2 glow-text">MONOCHROME ECHO</h1>
+            <p class="text-monoDim text-sm md:text-base mb-6 max-w-xs">An atmospheric journey of shadow, precision, and light.</p>
+
+            <div class="w-full max-w-xs mb-6">
+                <label class="block text-xs font-mono text-monoDim uppercase tracking-wider mb-2 text-left">Difficulty Mode</label>
+                <div class="grid grid-cols-3 gap-1 bg-monoCard p-1 rounded-xl border border-monoBorder">
+                    <button onclick="setDifficulty('EASY')" id="diffBtnEASY" class="py-2 text-xs font-bold rounded-lg transition">EASY</button>
+                    <button onclick="setDifficulty('NORMAL')" id="diffBtnNORMAL" class="py-2 text-xs font-bold rounded-lg transition">NORMAL</button>
+                    <button onclick="setDifficulty('HARDCORE')" id="diffBtnHARDCORE" class="py-2 text-xs font-bold rounded-lg transition">HARDCORE</button>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3 w-full max-w-xs">
+                <button onclick="startGame()" class="w-full py-4 bg-white text-monoBg font-bold rounded-xl hover:bg-neutral-200 transition shadow-lg glow-box active:scale-95 transform duration-150">
+                    PLAY GAME
+                </button>
+                <button onclick="openLevelSelect()" class="w-full py-3.5 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition active:scale-95 transform duration-150">
+                    LEVEL SELECT
+                </button>
+                <button onclick="openEditor()" class="w-full py-3.5 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition active:scale-95 transform duration-150">
+                    LEVEL EDITOR
+                </button>
+                <button onclick="openHowToPlay()" class="w-full py-3.5 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition active:scale-95 transform duration-150">
+                    HOW TO PLAY
+                </button>
+            </div>
+
+            <div class="mt-6 text-xs font-mono text-monoDim">
+                Press <span class="text-white bg-white/10 px-1.5 py-0.5 rounded">SHIFT / J</span> to Shadow Dash
+            </div>
+        </div>
+
+        <!-- LEVEL SELECT MENU -->
+        <div id="menuLevelSelect" class="hidden flex-col items-center max-w-2xl w-full animate-fadeIn">
+            <h2 class="text-3xl font-extrabold tracking-tight mb-6">SELECT LEVEL</h2>
+            <div id="levelGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full mb-8 max-h-[60vh] overflow-y-auto pr-2"></div>
+            <button onclick="openMainMenu()" class="py-3 px-8 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition">
+                BACK TO MAIN MENU
+            </button>
+        </div>
+
+        <!-- LEVEL EDITOR MENU -->
+        <div id="menuEditor" class="hidden flex-col items-center max-w-lg w-full animate-fadeIn text-left">
+            <h2 class="text-3xl font-extrabold tracking-tight mb-4 text-center">LEVEL EDITOR</h2>
+            <div class="bg-monoCard border border-monoBorder p-5 rounded-2xl w-full space-y-4 mb-6 text-sm">
+                <p class="text-monoDim">Create and test custom monochrome challenges. Click on canvas in Edit Mode to place elements.</p>
+                <div class="flex gap-2">
+                    <button onclick="setEditorTool('platform')" id="toolPlatform" class="flex-1 py-2 bg-white text-monoBg font-bold rounded-lg text-xs">PLATFORM</button>
+                    <button onclick="setEditorTool('spike')" id="toolSpike" class="flex-1 py-2 bg-monoCard border border-monoBorder text-white font-bold rounded-lg text-xs">SPIKE</button>
+                    <button onclick="setEditorTool('portal')" id="toolPortal" class="flex-1 py-2 bg-monoCard border border-monoBorder text-white font-bold rounded-lg text-xs">PORTAL</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="testCustomLevel()" class="flex-1 py-3 bg-white text-monoBg font-bold rounded-xl transition shadow-lg">TEST LEVEL</button>
+                    <button onclick="exportCustomLevel()" class="flex-1 py-3 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl transition">EXPORT JSON</button>
+                </div>
+            </div>
+            <button onclick="openMainMenu()" class="py-3 px-8 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition">
+                BACK TO MAIN MENU
+            </button>
+        </div>
+
+        <!-- HOW TO PLAY MENU -->
+        <div id="menuHowToPlay" class="hidden flex-col items-center max-w-md w-full animate-fadeIn text-left">
+            <h2 class="text-3xl font-extrabold tracking-tight mb-4 text-center">HOW TO PLAY</h2>
+            <div class="bg-monoCard border border-monoBorder p-6 rounded-2xl w-full space-y-4 mb-6 text-sm">
+                <div>
+                    <h3 class="font-bold text-white mb-1">Controls & Abilities</h3>
+                    <p class="text-monoDim">Move with <span class="text-white">A/D</span> or <span class="text-white">Arrows</span>. Jump with <span class="text-white">Space</span>. Press <span class="text-white">Shift / J</span> to perform a <span class="text-white">Shadow Dash</span> through hazards!</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white mb-1">Parallax & Lighting</h3>
+                    <p class="text-monoDim">Explore the multi-layered atmospheric background silhouettes guided by your character's dynamic spotlight.</p>
+                </div>
+            </div>
+            <button onclick="openMainMenu()" class="py-3 px-8 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition">
+                BACK TO MAIN MENU
+            </button>
+        </div>
+
+        <!-- PAUSE MENU -->
+        <div id="menuPause" class="hidden flex-col items-center text-center max-w-sm w-full animate-fadeIn">
+            <h2 class="text-3xl font-extrabold tracking-tight mb-4">GAME PAUSED</h2>
+            <div class="flex flex-col gap-3 w-full">
+                <button onclick="resumeGame()" class="w-full py-3.5 bg-white text-monoBg font-bold rounded-xl hover:bg-neutral-200 transition shadow-lg">RESUME</button>
+                <button onclick="restartLevel()" class="w-full py-3.5 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition">RESTART LEVEL</button>
+                <button onclick="openMainMenu()" class="w-full py-3.5 bg-monoCard border border-monoBorder text-red-400 font-semibold rounded-xl hover:bg-neutral-800 transition">QUIT TO MENU</button>
+            </div>
+        </div>
+
+        <!-- VICTORY SCREEN -->
+        <div id="menuVictory" class="hidden flex-col items-center text-center max-w-md w-full animate-fadeIn">
+            <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-3xl mb-4 glow-box">✦</div>
+            <h2 id="victoryTitle" class="text-4xl font-extrabold tracking-tight mb-2">LEVEL COMPLETE</h2>
+            <p class="text-monoDim text-sm mb-6">You conquered the darkness.</p>
+            <div class="bg-monoCard border border-monoBorder p-5 rounded-2xl w-full mb-6 font-mono text-sm space-y-3">
+                <div class="flex justify-between"><span class="text-monoDim">Time Taken:</span><span id="vicTime" class="text-white font-bold">00:00.000</span></div>
+                <div class="flex justify-between"><span class="text-monoDim">Deaths:</span><span id="vicDeaths" class="text-white font-bold">0</span></div>
+            </div>
+            <div class="flex gap-3 w-full">
+                <button onclick="restartLevel()" class="flex-1 py-3.5 bg-monoCard border border-monoBorder text-white font-semibold rounded-xl hover:bg-neutral-800 transition">RETRY</button>
+                <button id="btnNextLevel" onclick="nextLevel()" class="flex-1 py-3.5 bg-white text-monoBg font-bold rounded-xl hover:bg-neutral-200 transition shadow-lg">NEXT →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Script -->
+    <script>
+        // Setup Canvas & Global Context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const keys = {};
+        const touchInput = { left: false, right: false, jump: false, dash: false };
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyJ') {
+                player.dash();
+            }
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        const btnLeft = document.getElementById('btnTouchLeft');
+        const btnRight = document.getElementById('btnTouchRight');
+        const btnJump = document.getElementById('btnTouchJump');
+        const btnDash = document.getElementById('btnTouchDash');
+
+        if (btnLeft && btnRight && btnJump && btnDash) {
+            btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); touchInput.left = true; });
+            btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); touchInput.left = false; });
+            btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); touchInput.right = true; });
+            btnRight.addEventListener('touchend', (e) => { e.preventDefault(); touchInput.right = false; });
+            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); touchInput.jump = true; });
+            btnJump.addEventListener('touchend', (e) => { e.preventDefault(); touchInput.jump = false; });
+            btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); player.dash(); });
+        }
+
+        // Camera Engine
+        class Camera {
+            constructor() { this.x = 0; this.y = 0; }
+            update(targetX, targetY) {
+                this.x += (targetX - canvas.width / 2 - this.x) * 0.1;
+                this.y += (targetY - canvas.height / 2 - this.y) * 0.1;
+            }
+        }
+        const camera = new Camera();
+
+        // Parallax Background Renderer
+        function renderParallaxBackground(level) {
+            // Layer 1: Distant mountains / silhouettes
+            ctx.fillStyle = '#0f0f0f';
+            const l1Offset = camera.x * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width + 100; x += 100) {
+                const worldX = x + l1Offset;
+                const h = 250 + Math.sin(worldX * 0.002) * 80 + Math.cos(worldX * 0.005) * 50;
+                ctx.lineTo(x, canvas.height - h);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fill();
+
+            // Layer 2: Midground ruins
+            ctx.fillStyle = '#141414';
+            const l2Offset = camera.x * 0.5;
+            for (let i = -2; i < 5; i++) {
+                const rx = i * 600 - (l2Offset % 600);
+                ctx.fillRect(rx, canvas.height - 350, 120, 350);
+                ctx.fillRect(rx + 30, canvas.height - 450, 60, 100);
+            }
+        }
+
+        // Dynamic Spotlight Renderer
+        function renderDynamicLighting(playerX, playerY) {
+            ctx.save();
+            const gradient = ctx.createRadialGradient(
+                playerX - camera.x, playerY - camera.y, 40,
+                playerX - camera.x, playerY - camera.y, 450
+            );
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
+        // Particle System Engine
+        class ParticleEngine {
+            constructor() { this.particles = []; }
+            spawnDust(x, y, vx, vy) {
+                for (let i = 0; i < 4; i++) {
+                    this.particles.push({
+                        x, y, vx: vx + (Math.random() - 0.5) * 2, vy: vy + (Math.random() - 0.5) * 2,
+                        size: Math.random() * 3 + 1, alpha: 1, life: 20 + Math.random() * 10
+                    });
+                }
+            }
+            spawnDeathBurst(x, y) {
+                for (let i = 0; i < 30; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 6 + 2;
+                    this.particles.push({
+                        x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                        size: Math.random() * 4 + 2, alpha: 1, life: 40 + Math.random() * 20
+                    });
+                }
+            }
+            update() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx; p.y += p.vy; p.life--;
+                    p.alpha = Math.max(0, p.life / 30);
+                    if (p.life <= 0) this.particles.splice(i, 1);
+                }
+            }
+            draw() {
+                ctx.save();
+                for (const p of this.particles) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                    ctx.fillRect(p.x - camera.x, p.y - camera.y, p.size, p.size);
+                }
+                ctx.restore();
+            }
+        }
+        const particles = new ParticleEngine();
+
+        function rectOverlap(r1, r2) {
+            return !(r1.x + r1.width <= r2.x || r1.x >= r2.x + r2.width || r1.y + r1.height <= r2.y || r1.y >= r2.y + r2.height);
+        }
+
+        // --- Sound Engine ---
+        class SoundEngine {
+            constructor() { this.ctx = null; this.enabled = true; }
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.startAmbientSoundscape();
+                }
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+            toggleMute() {
+                this.enabled = !this.enabled;
+                document.getElementById('iconSoundOn')?.classList.toggle('hidden');
+                document.getElementById('iconSoundOff')?.classList.toggle('hidden');
+            }
+            startAmbientSoundscape() {
+                const chords = [[146.83, 220.00, 261.63], [174.61, 220.00, 349.23], [130.81, 196.00, 293.66]];
+                setInterval(() => {
+                    if (!this.enabled || !this.ctx || gameState.state !== 'PLAYING') return;
+                    const chord = chords[Math.floor(Math.random() * chords.length)];
+                    const note = chord[Math.floor(Math.random() * chord.length)];
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(note, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.03, this.ctx.currentTime + 1);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 4);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(); osc.stop(this.ctx.currentTime + 4);
+                }, 2500);
+            }
+            playJump() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.12);
+            }
+            playDash() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playDeath() {
+                if (!this.enabled) return;
+                this.init();
+                const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.25, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                noise.connect(gain); gain.connect(this.ctx.destination);
+                noise.start();
+            }
+            playWin() {
+                if (!this.enabled) return;
+                this.init();
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.1);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.4);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.1); osc.stop(this.ctx.currentTime + i * 0.1 + 0.4);
+                });
+            }
+        }
+        const audio = new SoundEngine();
+        function toggleAudioMute() { audio.toggleMute(); }
+
+        const gameState = {
+            state: 'MENU',
+            difficulty: 'NORMAL',
+            currentLevel: 0,
+            deaths: 0,
+            startTime: 0,
+            elapsedMs: 0,
+            unlockedLevels: parseInt(localStorage.getItem('mono_unlocked') || '1', 10),
+            levelBestTimes: JSON.parse(localStorage.getItem('mono_best_times_ms') || '{}'),
+            ghostReplays: JSON.parse(localStorage.getItem('mono_ghosts') || '{}')
+        };
+
+        function setDifficulty(d) {
+            gameState.difficulty = d;
+            ['EASY', 'NORMAL', 'HARDCORE'].forEach(key => {
+                const btn = document.getElementById(`diffBtn${key}`);
+                if (btn) btn.className = key === d ? "py-2 text-xs font-bold rounded-lg bg-white text-monoBg shadow transition" : "py-2 text-xs font-bold rounded-lg text-monoDim hover:text-white transition";
+            });
+        }
+        setDifficulty('NORMAL');
+
+        function formatTimeMs(ms) {
+            const sec = Math.floor(ms / 1000);
+            return `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}.${Math.floor(ms % 1000).toString().padStart(3, '0')}`;
+        }
+
+        // Level Manager & Custom Editor Level
+        class LevelManager {
+            constructor() {
+                this.levels = [
+                    {
+                        name: "Awakening", width: 2000, height: 1000,
+                        spawn: { x: 100, y: 750 }, portal: { x: 1750, y: 700, width: 40, height: 60 },
+                        platforms: [{ x: 50, y: 800, width: 400, height: 40 }, { x: 500, y: 750, width: 250, height: 40 }, { x: 800, y: 700, width: 200, height: 40 }, { x: 1050, y: 650, width: 200, height: 40 }, { x: 1300, y: 700, width: 200, height: 40 }, { x: 1600, y: 760, width: 300, height: 40 }],
+                        spikes: [{ x: 600, y: 735, width: 60, height: 15 }], collapsing: [], saws: [], lasers: [], checkpoints: []
+                    },
+                    {
+                        name: "Threshold", width: 2400, height: 1000,
+                        spawn: { x: 100, y: 750 }, portal: { x: 2150, y: 550, width: 40, height: 60 },
+                        platforms: [{ x: 50, y: 800, width: 300, height: 40 }, { x: 400, y: 750, width: 120, height: 40 }, { x: 570, y: 700, width: 120, height: 40 }, { x: 950, y: 650, width: 300, height: 40 }, { x: 1350, y: 600, width: 150, height: 40 }, { x: 1600, y: 550, width: 300, height: 40 }],
+                        spikes: [{ x: 1000, y: 635, width: 100, height: 15 }], collapsing: [], saws: [], lasers: [], checkpoints: []
+                    }
+                ];
+                this.customLevel = null;
+            }
+            getCurrentLevelData() {
+                if (gameState.currentLevel === 99 && this.customLevel) return this.customLevel;
+                return this.levels[gameState.currentLevel] || this.levels[0];
+            }
+        }
+        const levelManager = new LevelManager();
+
+        // --- Player (with Shadow Dash) ---
+        class Player {
+            constructor() {
+                this.width = 24; this.height = 36;
+                this.x = 100; this.y = 100; this.vx = 0; this.vy = 0;
+                this.grounded = false; this.facing = 1;
+                this.isDead = false; this.isDashing = false;
+                this.dashCooldown = 0; this.dashTimer = 0;
+            }
+            reset(x, y) {
+                this.x = x; this.y = y; this.vx = 0; this.vy = 0;
+                this.isDead = false; this.isDashing = false; this.dashTimer = 0;
+            }
+            dash() {
+                if (this.dashCooldown > 0 || this.isDashing || this.isDead) return;
+                this.isDashing = true;
+                this.dashTimer = 12; // Frames of dash
+                this.dashCooldown = 45; // Cooldown frames
+                audio.playDash();
+            }
+            update(level) {
+                if (this.isDead) return;
+
+                if (this.dashCooldown > 0) this.dashCooldown--;
+
+                if (this.isDashing) {
+                    this.vx = this.facing * 12;
+                    this.vy = 0;
+                    this.dashTimer--;
+                    particles.spawnDust(this.x + this.width / 2, this.y + this.height / 2, -this.facing * 2, 0);
+                    if (this.dashTimer <= 0) this.isDashing = false;
+                    this.x += this.vx;
+                    return;
+                }
+
+                let moveDir = 0;
+                if (keys['ArrowLeft'] || keys['KeyA'] || touchInput.left) moveDir = -1;
+                if (keys['ArrowRight'] || keys['KeyD'] || touchInput.right) moveDir = 1;
+
+                if (moveDir !== 0) {
+                    this.facing = moveDir;
+                    this.vx += (moveDir * 4.5 - this.vx) * 0.3;
+                } else {
+                    this.vx *= 0.75;
+                }
+
+                this.vy += 0.55;
+                if (this.vy > 14) this.vy = 14;
+
+                if (keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || touchInput.jump) {
+                    if (this.grounded) {
+                        this.vy = -11.5;
+                        this.grounded = false;
+                        audio.playJump();
+                    }
+                    touchInput.jump = false;
+                }
+
+                this.x += this.vx;
+                this.handleCollisionsX(level);
+                this.y += this.vy;
+                this.grounded = false;
+                this.handleCollisionsY(level);
+
+                if (!this.isDashing) this.checkHazards(level);
+
+                if (this.y > level.height + 200) this.die();
+            }
+            handleCollisionsX(level) {
+                for (const plat of level.platforms) {
+                    if (rectOverlap(this, plat)) {
+                        if (this.vx > 0) this.x = plat.x - this.width;
+                        else if (this.vx < 0) this.x = plat.x + plat.width;
+                        this.vx = 0;
+                    }
+                }
+            }
+            handleCollisionsY(level) {
+                for (const plat of level.platforms) {
+                    if (rectOverlap(this, plat)) {
+                        if (this.vy > 0) {
+                            this.y = plat.y - this.height;
+                            this.grounded = true;
+                            this.vy = 0;
+                        } else if (this.vy < 0) {
+                            this.y = plat.y + plat.height;
+                            this.vy = 0;
+                        }
+                    }
+                }
+            }
+            checkHazards(level) {
+                for (const spike of level.spikes) {
+                    if (rectOverlap(this, spike)) {
+                        this.die();
+                        return;
+                    }
+                }
+                if (rectOverlap(this, level.portal)) {
+                    completeLevel();
+                }
+            }
+            die() {
+                if (this.isDead) return;
+                this.isDead = true;
+                audio.playDeath();
+                particles.spawnDeathBurst(this.x + this.width / 2, this.y + this.height / 2);
+                gameState.deaths++;
+                document.getElementById('hudDeaths').innerText = `${gameState.deaths} Deaths`;
+                setTimeout(() => this.reset(levelManager.getCurrentLevelData().spawn.x, levelManager.getCurrentLevelData().spawn.y), 400);
+            }
+            draw() {
+                if (this.isDead) return;
+                ctx.save();
+                ctx.translate(this.x - camera.x + this.width / 2, this.y - camera.y + this.height);
+                ctx.scale(this.facing, 1);
+                ctx.fillStyle = this.isDashing ? 'rgba(255,255,255,0.6)' : '#ffffff';
+                ctx.fillRect(-this.width / 2, -this.height, this.width, this.height);
+                ctx.restore();
+            }
+        }
+        const player = new Player();
+
+        // --- Level Editor ---
+        let editorTool = 'platform';
+        function setEditorTool(tool) {
+            editorTool = tool;
+            ['platform', 'spike', 'portal'].forEach(t => {
+                const b = document.getElementById(`tool${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (b) b.className = t === tool ? "flex-1 py-2 bg-white text-monoBg font-bold rounded-lg text-xs" : "flex-1 py-2 bg-monoCard border border-monoBorder text-white font-bold rounded-lg text-xs";
+            });
+        }
+        function openEditor() {
+            gameState.state = 'EDITOR';
+            hideAllMenus();
+            if (!levelManager.customLevel) {
+                levelManager.customLevel = {
+                    name: "Custom Level", width: 2000, height: 1000,
+                    spawn: { x: 100, y: 750 }, portal: { x: 1800, y: 700, width: 40, height: 60 },
+                    platforms: [{ x: 50, y: 800, width: 400, height: 40 }], spikes: [], collapsing: [], saws: [], lasers: [], checkpoints: []
+                };
+            }
+            document.getElementById('menuLayer').classList.remove('hidden');
+            document.getElementById('menuEditor').classList.remove('hidden');
+            document.getElementById('menuEditor').classList.add('flex');
+        }
+        function testCustomLevel() {
+            gameState.currentLevel = 99;
+            loadLevel(99);
+        }
+        function exportCustomLevel() {
+            const json = JSON.stringify(levelManager.customLevel);
+            navigator.clipboard ? navigator.clipboard.writeText(json) : alert("Level JSON exported.");
+            alert("Custom Level JSON copied to clipboard!");
+        }
+
+        window.addEventListener('click', (e) => {
+            if (gameState.state === 'EDITOR' && e.target === canvas) {
+                const wx = e.clientX + camera.x;
+                const wy = e.clientY + camera.y;
+                if (editorTool === 'platform') {
+                    levelManager.customLevel.platforms.push({ x: Math.floor(wx / 40) * 40, y: Math.floor(wy / 40) * 40, width: 160, height: 40 });
+                } else if (editorTool === 'spike') {
+                    levelManager.customLevel.spikes.push({ x: Math.floor(wx / 20) * 20, y: Math.floor(wy / 20) * 20, width: 60, height: 15 });
+                } else if (editorTool === 'portal') {
+                    levelManager.customLevel.portal.x = wx;
+                    levelManager.customLevel.portal.y = wy;
+                }
+            }
+        });
+
+        // --- Render World & Parallax ---
+        function renderLevel(level) {
+            renderParallaxBackground(level);
+
+            ctx.fillStyle = '#f2f2f2';
+            for (const plat of level.platforms) ctx.fillRect(plat.x - camera.x, plat.y - camera.y, plat.width, plat.height);
+            for (const spike of level.spikes) {
+                ctx.beginPath();
+                ctx.moveTo(spike.x - camera.x, spike.y + spike.height - camera.y);
+                ctx.lineTo(spike.x + spike.width / 2 - camera.x, spike.y - camera.y);
+                ctx.lineTo(spike.x + spike.width - camera.x, spike.y + spike.height - camera.y);
+                ctx.fill();
+            }
+
+            const p = level.portal;
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+            ctx.strokeRect(p.x - camera.x, p.y - camera.y, p.width, p.height);
+
+            renderDynamicLighting(player.x + player.width / 2, player.y + player.height / 2);
+        }
+
+        // --- Flow Navigation ---
+        function hideAllMenus() {
+            ['menuMain', 'menuLevelSelect', 'menuEditor', 'menuHowToPlay', 'menuPause', 'menuVictory'].forEach(m => {
+                const el = document.getElementById(m);
+                if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+            });
+            document.getElementById('menuLayer').classList.add('hidden');
+        }
+        function openMainMenu() {
+            gameState.state = 'MENU';
+            document.getElementById('hud').classList.add('opacity-0');
+            document.getElementById('mobileControls').classList.remove('flex');
+            document.getElementById('mobileControls').classList.add('hidden');
+            hideAllMenus();
+            document.getElementById('menuLayer').classList.remove('hidden');
+            document.getElementById('menuMain').classList.remove('hidden');
+            document.getElementById('menuMain').classList.add('flex');
+        }
+        function openLevelSelect() {
+            gameState.state = 'LEVEL_SELECT';
+            hideAllMenus();
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            levelManager.levels.forEach((lvl, idx) => {
+                const card = document.createElement('div');
+                card.className = "p-4 rounded-2xl border bg-monoCard border-monoBorder cursor-pointer hover:border-white transition";
+                card.innerHTML = `<h3 class="font-bold text-white">${lvl.name}</h3>`;
+                card.onclick = () => loadLevel(idx);
+                grid.appendChild(card);
+            });
+            document.getElementById('menuLayer').classList.remove('hidden');
+            document.getElementById('menuLevelSelect').classList.remove('hidden');
+            document.getElementById('menuLevelSelect').classList.add('flex');
+        }
+        function openHowToPlay() {
+            hideAllMenus();
+            document.getElementById('menuLayer').classList.remove('hidden');
+            document.getElementById('menuHowToPlay').classList.remove('hidden');
+            document.getElementById('menuHowToPlay').classList.add('flex');
+        }
+        function openPauseMenu() {
+            if (gameState.state === 'PLAYING') {
+                gameState.state = 'PAUSED';
+                document.getElementById('menuLayer').classList.remove('hidden');
+                document.getElementById('menuPause').classList.remove('hidden');
+                document.getElementById('menuPause').classList.add('flex');
+            }
+        }
+        function resumeGame() {
+            if (gameState.state === 'PAUSED') {
+                gameState.state = 'PLAYING';
+                hideAllMenus();
+            }
+        }
+        function startGame() { audio.init(); loadLevel(0); }
+        function loadLevel(idx) {
+            gameState.currentLevel = idx;
+            gameState.state = 'PLAYING';
+            gameState.deaths = 0;
+            gameState.startTime = Date.now();
+            const lvl = levelManager.getCurrentLevelData();
+            player.reset(lvl.spawn.x, lvl.spawn.y);
+            hideAllMenus();
+            document.getElementById('hud').classList.remove('opacity-0');
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById('mobileControls').classList.remove('hidden');
+                document.getElementById('mobileControls').classList.add('flex');
+            }
+        }
+        function restartLevel() { loadLevel(gameState.currentLevel); }
+        function nextLevel() {
+            if (gameState.currentLevel + 1 < levelManager.levels.length) loadLevel(gameState.currentLevel + 1);
+            else openMainMenu();
+        }
+        function completeLevel() {
+            gameState.state = 'VICTORY';
+            audio.playWin();
+            document.getElementById('vicTime').innerText = formatTimeMs(Date.now() - gameState.startTime);
+            document.getElementById('vicDeaths').innerText = gameState.deaths;
+            hideAllMenus();
+            document.getElementById('menuLayer').classList.remove('hidden');
+            document.getElementById('menuVictory').classList.remove('hidden');
+            document.getElementById('menuVictory').classList.add('flex');
+        }
+
+        function gameLoop() {
+            if (gameState.state === 'PLAYING') {
+                const lvl = levelManager.getCurrentLevelData();
+                player.update(lvl);
+                particles.update();
+                camera.update(player.x + player.width / 2, player.y + player.height / 2);
+                document.getElementById('hudTimer').innerText = formatTimeMs(Date.now() - gameState.startTime);
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (gameState.state === 'PLAYING' || gameState.state === 'PAUSED' || gameState.state === 'EDITOR') {
+                const lvl = levelManager.getCurrentLevelData();
+                renderLevel(lvl);
+                particles.draw();
+                player.draw();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        openMainMenu();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

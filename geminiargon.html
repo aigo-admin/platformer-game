@@ -1,0 +1,3808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>UMBRA: The Silent Ascent — Monochrome Browser Platformer</title>
+  <style>
+/* ==========================================================================
+   UMBRA: THE SILENT ASCENT — Monochrome Atmospheric Platformer Stylesheet
+   ========================================================================== */
+
+:root {
+  --bg-void: #050507;
+  --bg-deep: #0b0b0e;
+  --bg-panel: rgba(14, 14, 18, 0.88);
+  --fg-pure: #f5f5f7;
+  --fg-bright: #dcdce2;
+  --fg-muted: #8e8e99;
+  --fg-dim: #4a4a54;
+  --border-subtle: rgba(255, 255, 255, 0.14);
+  --border-bright: rgba(255, 255, 255, 0.45);
+  --glow-soft: 0 0 24px rgba(255, 255, 255, 0.18);
+  --glow-strong: 0 0 32px rgba(255, 255, 255, 0.42);
+  --font-display: 'Cinzel', 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-void);
+  color: var(--fg-pure);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #16161d 0%, #070709 70%, #030304 100%);
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* Subtle CRT / Film Grain & Vignette Overlays */
+.vignette-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, 0.72) 100%);
+  z-index: 5;
+}
+
+.scanline-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0px,
+    rgba(255, 255, 255, 0) 2px,
+    rgba(0, 0, 0, 0.16) 3px,
+    rgba(0, 0, 0, 0.16) 4px
+  );
+  opacity: 0.45;
+  z-index: 6;
+  transition: opacity 0.3s ease;
+}
+
+.scanline-layer.disabled {
+  opacity: 0;
+}
+
+/* ==========================================================================
+   TOP IN-GAME HUD
+   ========================================================================== */
+#hud-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 15;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(4, 4, 6, 0.82) 0%, rgba(4, 4, 6, 0) 100%);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+#hud-bar.hidden {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+.hud-left, .hud-center, .hud-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.chapter-badge {
+  display: flex;
+  flex-direction: column;
+}
+
+.chapter-num {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.chapter-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: var(--fg-pure);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+}
+
+.hud-stat-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(12, 12, 16, 0.72);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 14px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-bright);
+  font-family: var(--font-mono);
+}
+
+.hud-stat-label {
+  color: var(--fg-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ability-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ability-pill {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-muted);
+  transition: all 0.25s ease;
+}
+
+.ability-pill.unlocked {
+  color: var(--fg-pure);
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.12);
+}
+
+.ability-pill.cooldown {
+  opacity: 0.4;
+}
+
+.icon-btn {
+  background: rgba(15, 15, 20, 0.75);
+  color: var(--fg-bright);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  backdrop-filter: blur(6px);
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: var(--border-bright);
+  box-shadow: var(--glow-soft);
+  transform: translateY(-1px);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   CHAPTER BANNER & TOAST ANNOUNCEMENTS
+   ========================================================================== */
+#chapter-banner {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 14;
+  opacity: 0;
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#chapter-banner.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.02);
+}
+
+.banner-numeral {
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+
+.banner-title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4.5vw, 44px);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-pure);
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.45);
+}
+
+.banner-line {
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  margin: 12px auto;
+}
+
+.banner-subtitle {
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: var(--fg-bright);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* ==========================================================================
+   MODAL OVERLAYS (MAIN MENU, LEVEL SELECT, PAUSE, VICTORY, CONTROLS)
+   ========================================================================== */
+.overlay-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 25;
+  background: radial-gradient(circle at center, rgba(8, 8, 12, 0.68) 0%, rgba(3, 3, 5, 0.92) 100%);
+  backdrop-filter: blur(8px);
+  opacity: 1;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+.overlay-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: clamp(24px, 4vw, 40px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 40px rgba(255, 255, 255, 0.05);
+  text-align: center;
+  position: relative;
+}
+
+.modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.game-logo-pre {
+  font-size: 11px;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+
+.game-logo-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vw, 62px);
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  color: #ffffff;
+  text-shadow: 0 0 36px rgba(255, 255, 255, 0.45);
+  margin-bottom: 4px;
+}
+
+.game-logo-sub {
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--fg-bright);
+  opacity: 0.8;
+  margin-bottom: 24px;
+}
+
+.lore-quote {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--fg-muted);
+  max-width: 480px;
+  margin: 0 auto 28px;
+  font-style: italic;
+}
+
+.menu-btn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.menu-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-pure);
+  border: 1px solid var(--border-subtle);
+  padding: 13px 22px;
+  border-radius: 6px;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--fg-pure);
+  box-shadow: var(--glow-soft);
+  transform: translateY(-1px);
+}
+
+.menu-btn.primary {
+  background: #f5f5f7;
+  color: #050507;
+  border-color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.28);
+}
+
+.menu-btn.primary:hover {
+  background: #ffffff;
+  box-shadow: var(--glow-strong);
+}
+
+/* ==========================================================================
+   LEVEL SELECT GRID
+   ========================================================================== */
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 12px;
+  margin: 20px 0 24px;
+  text-align: left;
+}
+
+.level-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 126px;
+  position: relative;
+  overflow: hidden;
+}
+
+.level-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-bright);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-soft);
+}
+
+.level-card.completed {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.level-card-num {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.level-card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--fg-pure);
+  margin: 4px 0 6px;
+}
+
+.level-card-desc {
+  font-size: 11px;
+  color: var(--fg-muted);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.level-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-bright);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+/* ==========================================================================
+   CONTROLS & MECHANICS REFERENCE
+   ========================================================================== */
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  text-align: left;
+  margin: 18px 0 24px;
+}
+
+.control-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.control-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.kbd-tag {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #ffffff;
+}
+
+.control-desc {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   STATS SUMMARY TABLE (LEVEL COMPLETE / VICTORY)
+   ========================================================================== */
+.stats-showcase {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 22px 0;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px 10px;
+}
+
+.stat-box-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+
+.stat-box-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--fg-pure);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   TOUCH / ON-SCREEN CONTROLS (MOBILE / TABLET / OPTIONAL DESKTOP)
+   ========================================================================== */
+#touch-controls {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#touch-controls.hidden {
+  display: none;
+}
+
+.touch-cluster {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.touch-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(18, 18, 24, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  transition: transform 0.1s ease, background 0.1s ease;
+  touch-action: manipulation;
+}
+
+.touch-btn:active, .touch-btn.pressed {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: #ffffff;
+  transform: scale(0.93);
+}
+
+.touch-btn.action-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  #hud-bar {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+  .ability-pills {
+    display: none;
+  }
+  .stats-showcase {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div id="app-root">
+    <canvas id="game-canvas"></canvas>
+    <div class="vignette-layer"></div>
+    <div id="scanline-layer" class="scanline-layer"></div>
+
+    <!-- TOP IN-GAME HUD -->
+    <header id="hud-bar" class="hidden">
+      <div class="hud-left">
+        <div class="chapter-badge">
+          <span id="hud-chapter-num" class="chapter-num">Chapter I</span>
+          <span id="hud-chapter-name" class="chapter-name">The Sunken Ossuary</span>
+        </div>
+        <div class="ability-pills">
+          <span class="ability-pill unlocked">Jump / Double Jump</span>
+          <span class="ability-pill unlocked">Wall Cling</span>
+          <span id="pill-dash" class="ability-pill">Dash: Ch.IV</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="hud-stat-group">
+          <div class="hud-stat">
+            <span class="hud-stat-label">Time</span>
+            <span id="hud-timer">00:00.0</span>
+          </div>
+          <div class="hud-stat">
+            <span class="hud-stat-label">Lumen</span>
+            <span id="hud-shards">0/3</span>
+          </div>
+          <div class="hud-stat">
+            <span class="hud-stat-label">Falls</span>
+            <span id="hud-deaths">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <button id="btn-hud-touch" class="icon-btn" title="Toggle On-Screen Controls">Touch UI</button>
+        <button id="btn-hud-mute" class="icon-btn" title="Mute / Unmute Audio (M)">Sound: On</button>
+        <button id="btn-hud-restart" class="icon-btn" title="Respawn at Checkpoint (R)">Respawn</button>
+        <button id="btn-hud-pause" class="icon-btn" title="Pause Game (Esc / P)">Pause</button>
+      </div>
+    </header>
+
+    <!-- CHAPTER ANNOUNCEMENT BANNER -->
+    <div id="chapter-banner">
+      <div id="banner-numeral" class="banner-numeral">Chapter I</div>
+      <h1 id="banner-title" class="banner-title">The Sunken Ossuary</h1>
+      <div class="banner-line"></div>
+      <p id="banner-subtitle" class="banner-subtitle">Beneath the silent roots of a forgotten world, a single ember stirs.</p>
+    </div>
+
+    <!-- MAIN MENU OVERLAY -->
+    <section id="menu-overlay" class="overlay-screen">
+      <div class="modal-card">
+        <div class="game-logo-pre">A Monochrome Precision Platformer</div>
+        <h1 class="game-logo-title">UMBRA</h1>
+        <div class="game-logo-sub">The Silent Ascent</div>
+        <p class="lore-quote">
+          “When the Great Spire fell silent, the world bled into ash and shadow.
+          Ascend the six forsaken chambers and rekindle the Crown of Light.”
+        </p>
+        <div class="menu-btn-stack">
+          <button id="btn-play-continue" class="menu-btn primary">Begin Ascent</button>
+          <button id="btn-open-levels" class="menu-btn">Select Chapter (6 Levels)</button>
+          <button id="btn-open-controls" class="menu-btn">Controls &amp; Mechanics</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL SELECT OVERLAY -->
+    <section id="levels-overlay" class="overlay-screen hidden">
+      <div class="modal-card">
+        <div class="game-logo-pre">Chronicle of the Spire</div>
+        <h2 class="game-logo-title" style="font-size: 32px; letter-spacing: 0.16em;">Select Chapter</h2>
+        <div id="level-select-grid" class="level-grid"></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+          <button id="btn-levels-back" class="menu-btn" style="min-width: 150px;">Back</button>
+          <button id="btn-unlock-all" class="menu-btn" style="min-width: 190px;">Unlock All Chapters</button>
+          <button id="btn-reset-save" class="icon-btn" style="padding: 10px 16px;">Reset Progress</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTROLS & MECHANICS OVERLAY -->
+    <section id="controls-overlay" class="overlay-screen hidden">
+      <div class="modal-card">
+        <div class="game-logo-pre">Master the Movement</div>
+        <h2 class="game-logo-title" style="font-size: 30px; letter-spacing: 0.14em;">Controls &amp; Mechanics</h2>
+        <div class="controls-grid">
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">A / D</span>
+              <span class="kbd-tag">← / →</span>
+            </div>
+            <div class="control-desc"><strong>Run &amp; Strafe:</strong> Responsive acceleration with mid-air directional control.</div>
+          </div>
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">Space</span>
+              <span class="kbd-tag">W / ↑ / Z</span>
+            </div>
+            <div class="control-desc"><strong>Jump &amp; Double Jump:</strong> Hold longer for higher arcs. Press again in mid-air for a Soul Jump.</div>
+          </div>
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">Wall + Jump</span>
+            </div>
+            <div class="control-desc"><strong>Wall Cling &amp; Kick:</strong> Slide down vertical stone walls and jump off to scale shafts.</div>
+          </div>
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">Shift</span>
+              <span class="kbd-tag">X / K</span>
+            </div>
+            <div class="control-desc"><strong>Shadow Dash (Ch. IV+):</strong> Instant horizontal burst across wide chasms. Resets on landing.</div>
+          </div>
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">R</span>
+              <span class="kbd-tag">Esc / P</span>
+            </div>
+            <div class="control-desc"><strong>Quick Respawn &amp; Pause:</strong> Instant respawn at your last lit Lantern Checkpoint.</div>
+          </div>
+          <div class="control-item">
+            <div class="control-keys">
+              <span class="kbd-tag">✦ Lumen Shards</span>
+            </div>
+            <div class="control-desc"><strong>Optional Challenge:</strong> Each chapter hides 3 Lumen Shards along perilous side routes.</div>
+          </div>
+        </div>
+        <button id="btn-controls-back" class="menu-btn primary" style="max-width: 220px; margin: 0 auto;">Return</button>
+      </div>
+    </section>
+
+    <!-- PAUSE MENU OVERLAY -->
+    <section id="pause-overlay" class="overlay-screen hidden">
+      <div class="modal-card" style="max-width: 440px;">
+        <div class="game-logo-pre">Ascent Suspended</div>
+        <h2 class="game-logo-title" style="font-size: 32px; margin-bottom: 20px;">Paused</h2>
+        <div class="menu-btn-stack">
+          <button id="btn-pause-resume" class="menu-btn primary">Resume Ascent</button>
+          <button id="btn-pause-checkpoint" class="menu-btn">Respawn at Checkpoint</button>
+          <button id="btn-pause-restart-level" class="menu-btn">Restart Chapter</button>
+          <button id="btn-pause-levels" class="menu-btn">Select Chapter</button>
+          <button id="btn-pause-scanlines" class="menu-btn">Film Scanlines: On</button>
+          <button id="btn-pause-menu" class="menu-btn">Main Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL COMPLETE OVERLAY -->
+    <section id="complete-overlay" class="overlay-screen hidden">
+      <div class="modal-card" style="max-width: 540px;">
+        <div class="game-logo-pre">Chamber Transcended</div>
+        <h2 id="complete-chapter-title" class="game-logo-title" style="font-size: 26px; letter-spacing: 0.12em; margin-bottom: 8px;">Chapter I</h2>
+        <div class="stats-showcase">
+          <div class="stat-box">
+            <div class="stat-box-label">Time</div>
+            <div id="complete-time" class="stat-box-val">00:34.2</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Falls</div>
+            <div id="complete-deaths" class="stat-box-val">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Lumen</div>
+            <div id="complete-shards" class="stat-box-val">3/3</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Rank</div>
+            <div id="complete-rank" class="stat-box-val">S</div>
+          </div>
+        </div>
+        <div class="menu-btn-stack">
+          <button id="btn-next-level" class="menu-btn primary">Next Chapter →</button>
+          <button id="btn-complete-replay" class="menu-btn">Replay Chapter</button>
+          <button id="btn-complete-levels" class="menu-btn">Chapter Select</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL VICTORY OVERLAY -->
+    <section id="victory-overlay" class="overlay-screen hidden">
+      <div class="modal-card" style="max-width: 580px;">
+        <div class="game-logo-pre">The Great Beacon is Rekindled</div>
+        <h2 class="game-logo-title" style="font-size: 34px; letter-spacing: 0.16em;">Dawn Restored</h2>
+        <p class="lore-quote" style="margin-bottom: 16px;">
+          “Through iron, abyss, and silence, the tiny vessel carried the final spark to the summit.
+          The Spire shines once more across the monochrome sea.”
+        </p>
+        <div class="stats-showcase">
+          <div class="stat-box">
+            <div class="stat-box-label">Total Time</div>
+            <div id="victory-time" class="stat-box-val">03:45.0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Total Falls</div>
+            <div id="victory-deaths" class="stat-box-val">4</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Lumen Shards</div>
+            <div id="victory-shards" class="stat-box-val">18/18</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Mastery</div>
+            <div id="victory-rank" class="stat-box-val">S</div>
+          </div>
+        </div>
+        <div class="menu-btn-stack">
+          <button id="btn-victory-replay" class="menu-btn primary">Play Again from Chapter I</button>
+          <button id="btn-victory-levels" class="menu-btn">Select Chapter</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ON-SCREEN TOUCH / MOBILE CONTROLS -->
+    <div id="touch-controls" class="hidden">
+      <div class="touch-cluster">
+        <button id="touch-left" class="touch-btn" aria-label="Move Left">◀</button>
+        <button id="touch-right" class="touch-btn" aria-label="Move Right">▶</button>
+      </div>
+      <div class="touch-cluster">
+        <button id="touch-dash" class="touch-btn action-label" aria-label="Shadow Dash">Dash</button>
+        <button id="touch-jump" class="touch-btn action-label" aria-label="Jump">Jump</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+/* ==========================================================================
+   UMBRA: THE SILENT ASCENT — Web Audio API Procedural Sound Engine
+   Synthesizes atmospheric wind/drone ambience and crisp monochrome SFX
+   without requiring any external audio files.
+   ========================================================================== */
+
+class UmbraAudio {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.initialized = false;
+    this.ambientGain = null;
+    this.masterGain = null;
+    this.windFilter = null;
+  }
+
+  init() {
+    if (this.initialized) {
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return;
+    }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = this.muted ? 0 : 0.65;
+      this.masterGain.connect(this.ctx.destination);
+
+      this.startAmbientDrone();
+      this.initialized = true;
+    } catch (e) {
+      // AudioContext blocked or unsupported
+    }
+  }
+
+  startAmbientDrone() {
+    if (!this.ctx) return;
+    try {
+      this.ambientGain = this.ctx.createGain();
+      this.ambientGain.gain.value = 0.14;
+      this.ambientGain.connect(this.masterGain);
+
+      // Subtle low sub-drone oscillators (A1 + E2 fifth interval)
+      const freqs = [55, 82.41, 110];
+      freqs.forEach((f, idx) => {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = idx === 2 ? 'triangle' : 'sine';
+        osc.frequency.value = f;
+        g.gain.value = idx === 0 ? 0.35 : 0.12;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 180;
+
+        osc.connect(filter);
+        filter.connect(g);
+        g.connect(this.ambientGain);
+        osc.start();
+      });
+
+      // Procedural filtered pink/wind noise buffer
+      const bufferSize = this.ctx.sampleRate * 3;
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.025;
+        b6 = white * 0.115926;
+      }
+
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+
+      this.windFilter = this.ctx.createBiquadFilter();
+      this.windFilter.type = 'bandpass';
+      this.windFilter.frequency.value = 320;
+      this.windFilter.Q.value = 1.8;
+
+      const windGain = this.ctx.createGain();
+      windGain.gain.value = 0.45;
+
+      whiteNoise.connect(this.windFilter);
+      this.windFilter.connect(windGain);
+      windGain.connect(this.ambientGain);
+      whiteNoise.start();
+    } catch (e) {}
+  }
+
+  toggleMute() {
+    this.init();
+    this.muted = !this.muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 0.65, this.ctx.currentTime, 0.05);
+    }
+    return this.muted;
+  }
+
+  setMute(flag) {
+    this.muted = Boolean(flag);
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 0.65, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  playJump(isDoubleOrWall = false) {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    const base = isDoubleOrWall ? 230 : 165;
+    osc.frequency.setValueAtTime(base, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 2.15, now + 0.13);
+
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }
+
+  playLand(intensity = 0.5) {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(38, now + 0.09);
+
+    const vol = Math.min(0.24, Math.max(0.05, intensity * 0.2));
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.11);
+  }
+
+  playStep() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(95 + Math.random() * 25, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.045);
+
+    gain.gain.setValueAtTime(0.045, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.055);
+  }
+
+  playDash() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Filtered frequency sweep + airy burst
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(340, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + 0.18);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1100, now);
+    filter.frequency.exponentialRampToValueAtTime(220, now + 0.18);
+
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  playCheckpoint() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const notes = [440, 554.37, 659.25, 880];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.06);
+      gain.gain.linearRampToValueAtTime(0.14, now + idx * 0.06 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.06 + 0.65);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 0.7);
+    });
+  }
+
+  playShard() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const notes = [587.33, 880, 1174.66];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.045);
+
+      gain.gain.setValueAtTime(0.16, now + idx * 0.045);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now + idx * 0.045);
+      osc.stop(now + idx * 0.045 + 0.48);
+    });
+  }
+
+  playGeyser() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 0.25);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+
+  playDeath() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const freqs = [190, 135, 92];
+    freqs.forEach((f) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + 0.35);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 420;
+
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    });
+  }
+
+  playLevelComplete() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const chord = [220, 277.18, 329.63, 440, 659.25, 880];
+    chord.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.14, now + idx * 0.08 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0005, now + idx * 0.08 + 1.4);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 1.45);
+    });
+  }
+}
+
+window.UmbraAudio = UmbraAudio;
+
+/* ==========================================================================
+   UMBRA: THE SILENT ASCENT — 6 Handcrafted Monochrome Levels
+   Coordinate system is in grid units (1 unit = 40px).
+   Physics reference:
+   - Max Single Jump Height: ~2.53 units
+   - Max Horizontal Jump Distance (flat): ~4.5 units
+   - Wall Jump: climbs any vertical wall or shaft
+   - Shadow Dash: ~4.2 units horizontal burst in mid-air
+   ========================================================================== */
+
+const UMBRA_LEVELS = [
+  // =========================================================================
+  // CHAPTER I: THE SUNKEN OSSUARY
+  // Theme: Ancient subterranean sanctuary. Teaches movement, variable jump,
+  // spikes, Lantern Checkpoints, and Lumen Shards through visual runes.
+  // =========================================================================
+  {
+    id: 1,
+    numeral: "Chapter I",
+    title: "The Sunken Ossuary",
+    subtitle: "Beneath the silent roots of a forgotten world, a single ember stirs.",
+    mechanicsDesc: "Precision Jumping • Spikes • Lantern Checkpoints",
+    dashUnlocked: false,
+    bounds: { width: 86, height: 22 },
+    spawn: { x: 3, y: 15 },
+    portal: { x: 80, y: 10 },
+    lightBeams: [
+      { x: 5, width: 5, angle: 0.22, alpha: 0.13 },
+      { x: 26, width: 6, angle: 0.2, alpha: 0.11 },
+      { x: 50, width: 5, angle: 0.24, alpha: 0.12 },
+      { x: 77, width: 7, angle: 0.18, alpha: 0.16 }
+    ],
+    scenery: [
+      { type: "pillar", x: 2, y: 6, w: 1.5, h: 11 },
+      { type: "arch", x: 9, y: 11, w: 5, h: 6 },
+      { type: "chain", x: 18, y: 0, h: 9 },
+      { type: "chain", x: 21, y: 0, h: 7 },
+      { type: "monolith", x: 35, y: 9, w: 2.2, h: 7 },
+      { type: "tree", x: 52, y: 10, scale: 1.1 },
+      { type: "arch", x: 77, y: 6, w: 6, h: 6 },
+      { type: "glyph", x: 5.5, y: 13.5, glyph: "MOVE" },
+      { type: "glyph", x: 14.5, y: 13.5, glyph: "JUMP" },
+      { type: "glyph", x: 36, y: 11.5, glyph: "LANTERN" }
+    ],
+    platforms: [
+      // Ceiling & border framing
+      { x: 0, y: 0, w: 86, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 20, style: "stone" },
+      { x: 84, y: 2, w: 2, h: 20, style: "stone" },
+
+      // Opening chamber
+      { x: 2, y: 17, w: 15, h: 5, style: "stone" },
+      // First gentle step & gap
+      { x: 19, y: 16, w: 6, h: 6, style: "stone" },
+      { x: 27, y: 15, w: 6, h: 7, style: "stone" },
+      // Upper optional shard ledge above first chamber
+      { x: 20, y: 11.5, w: 4, h: 1, style: "ledge" },
+      { x: 25, y: 13.5, w: 2, h: 0.8, style: "ledge" },
+
+      // Checkpoint 1 Sanctuary
+      { x: 35, y: 15, w: 9, h: 7, style: "stone" },
+      // Spike pit floor with stepping stones
+      { x: 44, y: 18, w: 15, h: 4, style: "stone" },
+      { x: 46, y: 14.5, w: 2.5, h: 1, style: "ledge" },
+      { x: 51, y: 13.5, w: 2.5, h: 1, style: "ledge" },
+      { x: 56, y: 14.5, w: 2.5, h: 1, style: "ledge" },
+
+      // Checkpoint 2 Plaza
+      { x: 59, y: 15, w: 8, h: 7, style: "stone" },
+
+      // Ascending ruins toward the exit portal
+      { x: 69, y: 13.5, w: 3, h: 1, style: "ledge" },
+      { x: 74, y: 12, w: 3, h: 1, style: "ledge" },
+      { x: 68, y: 9.5, w: 3, h: 0.8, style: "ledge" }, // Optional high shard ledge
+      { x: 78, y: 12, w: 6, h: 10, style: "stone" }
+    ],
+    spikes: [
+      // Spike bed on floor (y=17.3 to 18)
+      { x: 44.5, y: 18, count: 14, dir: "up" },
+      // Small hazard on Checkpoint 2 plaza forcing a clean hop
+      { x: 62.5, y: 15, count: 2, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 38, y: 15 },
+      { x: 60.5, y: 15 }
+    ],
+    shards: [
+      { x: 21.5, y: 10.2 },
+      { x: 52.2, y: 11.8 },
+      { x: 69.5, y: 8.2 }
+    ],
+    movingPlatforms: [],
+    crumblingPlatforms: [],
+    saws: [],
+    lasers: [],
+    geysers: []
+  },
+
+  // =========================================================================
+  // CHAPTER II: THE WEEPING VIADUCT
+  // Theme: Vast abyssal bridge with suspended counterweights and decaying
+  // masonry. Introduces Moving Platforms and Crumbling Ledges.
+  // =========================================================================
+  {
+    id: 2,
+    numeral: "Chapter II",
+    title: "The Weeping Viaduct",
+    subtitle: "Stone surrenders to time; only momentum carries the weightless.",
+    mechanicsDesc: "Moving Lifts • Crumbling Masonry • Abyssal Gaps",
+    dashUnlocked: false,
+    bounds: { width: 94, height: 24 },
+    spawn: { x: 4, y: 15 },
+    portal: { x: 88, y: 11 },
+    lightBeams: [
+      { x: 8, width: 6, angle: 0.25, alpha: 0.11 },
+      { x: 38, width: 7, angle: 0.25, alpha: 0.12 },
+      { x: 68, width: 6, angle: 0.22, alpha: 0.13 },
+      { x: 86, width: 6, angle: 0.2, alpha: 0.16 }
+    ],
+    scenery: [
+      { type: "arch", x: 3, y: 11, w: 6, h: 6 },
+      { type: "chain", x: 16, y: 0, h: 14 },
+      { type: "chain", x: 28, y: 0, h: 12 },
+      { type: "pillar", x: 36, y: 5, w: 2, h: 11 },
+      { type: "chain", x: 54, y: 0, h: 15 },
+      { type: "monolith", x: 64, y: 8, w: 2.5, h: 7 },
+      { type: "arch", x: 85, y: 7, w: 6, h: 6 },
+      { type: "glyph", x: 11.5, y: 13.5, glyph: "CRUMBLE" },
+      { type: "glyph", x: 40, y: 12.5, glyph: "LIFT" }
+    ],
+    platforms: [
+      { x: 0, y: 0, w: 94, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 22, style: "stone" },
+      { x: 92, y: 2, w: 2, h: 22, style: "stone" },
+
+      // Start pier
+      { x: 2, y: 17, w: 11, h: 7, style: "stone" },
+
+      // Anchor island after first crumbling bridge
+      { x: 25, y: 16, w: 5, h: 8, style: "stone" },
+
+      // Checkpoint 1 Pier
+      { x: 36, y: 16, w: 8, h: 8, style: "stone" },
+
+      // Mid-air shard alcove above moving lift
+      { x: 49, y: 10.5, w: 3, h: 0.9, style: "ledge" },
+
+      // Checkpoint 2 Pier
+      { x: 62, y: 15, w: 8, h: 9, style: "stone" },
+
+      // Final Exit Pier
+      { x: 84, y: 13, w: 8, h: 11, style: "stone" }
+    ],
+    crumblingPlatforms: [
+      // Section 1: Crumbling bridge over the abyss
+      { x: 15, y: 16.5, w: 3, h: 0.9 },
+      { x: 20, y: 16.0, w: 3, h: 0.9 },
+      { x: 31.5, y: 16.0, w: 3, h: 0.9 },
+      // Section 3: Rapid crumbling staircase after Checkpoint 2
+      { x: 72, y: 14.5, w: 2.8, h: 0.9 },
+      { x: 76.5, y: 13.5, w: 2.8, h: 0.9 },
+      { x: 80.5, y: 12.5, w: 2.5, h: 0.9 }
+    ],
+    movingPlatforms: [
+      // Lift 1: Horizontal shuttle across chasm (from x=45 to x=53)
+      { x1: 45, y1: 15.5, x2: 52.5, y2: 15.5, w: 3.5, h: 0.9, speed: 1.4 },
+      // Lift 2: Vertical + Horizontal diagonal carrier (from x=55.5,y=16 to x=59,y=13.5)
+      { x1: 55.5, y1: 16.5, x2: 58.5, y2: 13.5, w: 3.2, h: 0.9, speed: 1.3 }
+    ],
+    spikes: [
+      { x: 26.5, y: 16, count: 2, dir: "up" },
+      { x: 65, y: 15, count: 2, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 38.5, y: 16 },
+      { x: 63.5, y: 15 }
+    ],
+    shards: [
+      { x: 21.5, y: 13.2 },
+      { x: 50.5, y: 9.0 },
+      { x: 78.0, y: 10.5 }
+    ],
+    saws: [],
+    lasers: [],
+    geysers: []
+  },
+
+  // =========================================================================
+  // CHAPTER III: THE CLOCKWORK FOUNDRY
+  // Theme: Vertical gothic clocktower & sawblade mill. Focuses on Wall Sliding,
+  // Wall Jumping up shafts, and dodging rotating Sawblades.
+  // =========================================================================
+  {
+    id: 3,
+    numeral: "Chapter III",
+    title: "The Clockwork Foundry",
+    subtitle: "Iron teeth still grind in the dark, keeping time for dead kings.",
+    mechanicsDesc: "Wall Cling & Wall Jump • Rotating Sawblades • Vertical Shafts",
+    dashUnlocked: false,
+    bounds: { width: 92, height: 26 },
+    spawn: { x: 4, y: 19 },
+    portal: { x: 86, y: 10 },
+    lightBeams: [
+      { x: 10, width: 5, angle: 0.18, alpha: 0.1 },
+      { x: 35, width: 6, angle: 0.2, alpha: 0.12 },
+      { x: 64, width: 5, angle: 0.18, alpha: 0.12 },
+      { x: 84, width: 6, angle: 0.15, alpha: 0.15 }
+    ],
+    scenery: [
+      { type: "gear", x: 14, y: 12, r: 4.2, speed: 0.35 },
+      { type: "gear", x: 21, y: 9, r: 2.8, speed: -0.52 },
+      { type: "gear", x: 48, y: 14, r: 5.0, speed: 0.28 },
+      { type: "gear", x: 73, y: 11, r: 3.6, speed: -0.4 },
+      { type: "chain", x: 30, y: 0, h: 16 },
+      { type: "arch", x: 83, y: 4, w: 6, h: 6 },
+      { type: "glyph", x: 11, y: 17.5, glyph: "WALL" }
+    ],
+    platforms: [
+      { x: 0, y: 0, w: 92, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 24, style: "stone" },
+      { x: 90, y: 2, w: 2, h: 24, style: "stone" },
+
+      // Entry floor
+      { x: 2, y: 21, w: 14, h: 5, style: "stone" },
+
+      // First Wall-Jump Chimney (Left wall at x=12..13.5, Right wall at x=16..18)
+      { x: 11.5, y: 11, w: 1.5, h: 7.5, style: "stone" },
+      { x: 16, y: 11, w: 9, h: 15, style: "stone" },
+
+      // Bridge over sawblade pit to Checkpoint 1
+      { x: 25, y: 15, w: 10, h: 11, style: "stone" },
+      { x: 35, y: 13, w: 9, h: 13, style: "stone" },
+
+      // Sawblade corridor platforms
+      { x: 46, y: 13, w: 4, h: 1, style: "ledge" },
+      { x: 52, y: 12, w: 4, h: 1, style: "ledge" },
+      { x: 58, y: 14, w: 8, h: 12, style: "stone" }, // Checkpoint 2
+
+      // Second Wall-Jump Ascent with Saw Hazards
+      { x: 68, y: 8, w: 1.8, h: 11, style: "stone" },
+      { x: 73, y: 10, w: 2, h: 16, style: "stone" },
+
+      // Final approach to Foundry Summit
+      { x: 77.5, y: 11, w: 3, h: 0.9, style: "ledge" },
+      { x: 82.5, y: 10, w: 7.5, h: 16, style: "stone" }
+    ],
+    crumblingPlatforms: [
+      { x: 77.5, y: 15, w: 2.8, h: 0.9 }
+    ],
+    movingPlatforms: [
+      { x1: 63, y1: 19, x2: 67, y2: 19, w: 3, h: 0.9, speed: 1.5 }
+    ],
+    saws: [
+      // Patrol saw above bridge
+      { x1: 26.5, y1: 14.8, x2: 33.5, y2: 14.8, r: 0.85, speed: 1.3 },
+      // Saw between corridor ledges
+      { x1: 50.8, y1: 10.5, x2: 50.8, y2: 14.5, r: 0.9, speed: 1.6 },
+      // Saw in the second wall-jump chimney (placed on left edge so right wall stays open)
+      { x1: 69.8, y1: 12.5, x2: 69.8, y2: 15.5, r: 0.75, speed: 1.4 },
+      // Saw before final ledge
+      { x1: 76.2, y1: 9.2, x2: 81.2, y2: 9.2, r: 0.8, speed: 1.5 }
+    ],
+    spikes: [
+      { x: 44, y: 24, count: 14, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 37, y: 13 },
+      { x: 60.5, y: 14 }
+    ],
+    shards: [
+      // Top of first chimney left alcove
+      { x: 12.2, y: 9.5 },
+      // Above corridor saw
+      { x: 54, y: 9.5 },
+      // Low bonus route under second chimney
+      { x: 66.5, y: 17.2 }
+    ],
+    lasers: [],
+    geysers: []
+  },
+
+  // =========================================================================
+  // CHAPTER IV: THE RESONANT SANCTUM
+  // Theme: High vaulted cathedral where the player unlocks SHADOW DASH at an
+  // ancient shrine, crossing wide chasms, updraft geysers, and Eclipse Beams.
+  // =========================================================================
+  {
+    id: 4,
+    numeral: "Chapter IV",
+    title: "The Resonant Sanctum",
+    subtitle: "Strike through the veil of shadow; become swifter than the falling light.",
+    mechanicsDesc: "Shadow Dash Unlocked (Shift / X) • Updraft Geysers • Eclipse Beams",
+    dashUnlocked: true,
+    bounds: { width: 98, height: 24 },
+    spawn: { x: 4, y: 15 },
+    portal: { x: 92, y: 10 },
+    lightBeams: [
+      { x: 7, width: 5, angle: 0.15, alpha: 0.16 },
+      { x: 34, width: 6, angle: 0.2, alpha: 0.12 },
+      { x: 62, width: 6, angle: 0.2, alpha: 0.12 },
+      { x: 89, width: 6, angle: 0.15, alpha: 0.17 }
+    ],
+    scenery: [
+      { type: "shrine", x: 8, y: 13 },
+      { type: "arch", x: 25, y: 10, w: 6, h: 6 },
+      { type: "pillar", x: 47, y: 4, w: 2, h: 12 },
+      { type: "monolith", x: 65, y: 9, w: 2.5, h: 6 },
+      { type: "arch", x: 89, y: 4, w: 6, h: 6 },
+      { type: "glyph", x: 8, y: 11.2, glyph: "DASH" },
+      { type: "glyph", x: 35, y: 12.5, glyph: "GEYSER" }
+    ],
+    platforms: [
+      { x: 0, y: 0, w: 98, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 22, style: "stone" },
+      { x: 96, y: 2, w: 2, h: 22, style: "stone" },
+
+      // Shrine Platform (Dash unlocked immediately)
+      { x: 2, y: 17, w: 11, h: 7, style: "stone" },
+
+      // Wide 6.5-unit chasm requiring Jump + Shadow Dash!
+      { x: 19.5, y: 17, w: 5, h: 7, style: "stone" },
+
+      // Second wide dash gap to Checkpoint 1
+      { x: 31, y: 16, w: 8, h: 8, style: "stone" },
+
+      // High platform reached via Updraft Geyser
+      { x: 45, y: 11, w: 6, h: 13, style: "stone" },
+
+      // Eclipse Beam gauntlet bridge
+      { x: 54, y: 13, w: 14, h: 11, style: "stone" }, // Checkpoint 2 at x=65
+
+      // Final Dash + Geyser sequence to Summit Portal
+      { x: 75, y: 14, w: 4, h: 10, style: "stone" },
+      { x: 88, y: 10, w: 8, h: 14, style: "stone" }
+    ],
+    geysers: [
+      // Lifts player from x=39..44 up to y=11
+      { x: 41, y: 19, w: 2.5, h: 9, force: -720 },
+      // Final updraft from x=82..85 up to exit
+      { x: 82.5, y: 18, w: 2.8, h: 10, force: -740 }
+    ],
+    lasers: [
+      // Timed vertical Eclipse Beams across the Sanctum bridge (y=2 to y=13)
+      { x: 57, y1: 2, y2: 13, period: 2.6, activeTime: 1.0, offset: 0.0 },
+      { x: 61.5, y1: 2, y2: 13, period: 2.6, activeTime: 1.0, offset: 1.3 },
+      // Beam guarding final dash gap
+      { x: 71.5, y1: 2, y2: 20, period: 2.8, activeTime: 1.0, offset: 0.6 }
+    ],
+    crumblingPlatforms: [],
+    movingPlatforms: [],
+    saws: [],
+    spikes: [
+      { x: 58.5, y: 13, count: 2, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 33, y: 16 },
+      { x: 65, y: 13 }
+    ],
+    shards: [
+      { x: 16.2, y: 13.5 },
+      { x: 42.2, y: 8.5 },
+      { x: 77.0, y: 10.5 }
+    ]
+  },
+
+  // =========================================================================
+  // CHAPTER V: THE FRACTURED SPIRE
+  // Theme: Exterior wind-swept spire combining crumbling bridges, moving lifts,
+  // rotating saws, wall-jumps, and mid-air dashes.
+  // =========================================================================
+  {
+    id: 5,
+    numeral: "Chapter V",
+    title: "The Fractured Spire",
+    subtitle: "Higher than the storm clouds, the ruined tower pierces the pale void.",
+    mechanicsDesc: "Combined Mastery • Wind-Swept Ledges • Precision Gauntlet",
+    dashUnlocked: true,
+    bounds: { width: 102, height: 26 },
+    spawn: { x: 4, y: 18 },
+    portal: { x: 95, y: 8 },
+    lightBeams: [
+      { x: 12, width: 6, angle: 0.28, alpha: 0.11 },
+      { x: 46, width: 6, angle: 0.28, alpha: 0.12 },
+      { x: 78, width: 7, angle: 0.24, alpha: 0.14 }
+    ],
+    scenery: [
+      { type: "tree", x: 6, y: 14, scale: 1.0 },
+      { type: "gear", x: 28, y: 12, r: 3.8, speed: 0.45 },
+      { type: "pillar", x: 37, y: 6, w: 2, h: 11 },
+      { type: "chain", x: 56, y: 0, h: 14 },
+      { type: "monolith", x: 69, y: 7, w: 2.2, h: 7 },
+      { type: "arch", x: 92, y: 2, w: 6, h: 6 }
+    ],
+    platforms: [
+      { x: 0, y: 0, w: 102, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 24, style: "stone" },
+      { x: 100, y: 2, w: 2, h: 24, style: "stone" },
+
+      // Start terrace
+      { x: 2, y: 20, w: 9, h: 6, style: "stone" },
+
+      // Wall-jump pillar in mid-air
+      { x: 23, y: 11, w: 2, h: 8, style: "stone" },
+
+      // Checkpoint 1 Sanctuary
+      { x: 35, y: 16, w: 7, h: 10, style: "stone" },
+
+      // Checkpoint 2 Sanctuary
+      { x: 66, y: 14, w: 7, h: 12, style: "stone" },
+
+      // High wall-cling column before summit
+      { x: 85, y: 6, w: 1.8, h: 8.5, style: "stone" },
+
+      // Summit Platform
+      { x: 91, y: 8, w: 9, h: 18, style: "stone" }
+    ],
+    crumblingPlatforms: [
+      { x: 14, y: 19, w: 3, h: 0.9 },
+      { x: 28.5, y: 16.5, w: 3, h: 0.9 },
+      { x: 45, y: 15.5, w: 3, h: 0.9 },
+      { x: 60, y: 14.5, w: 3, h: 0.9 },
+      { x: 76, y: 13.5, w: 3, h: 0.9 }
+    ],
+    movingPlatforms: [
+      { x1: 50.5, y1: 15.5, x2: 56.5, y2: 13.5, w: 3.2, h: 0.9, speed: 1.5 }
+    ],
+    geysers: [
+      { x: 80.5, y: 17, w: 2.6, h: 9, force: -750 }
+    ],
+    saws: [
+      { x1: 19.5, y1: 15, x2: 19.5, y2: 19.5, r: 0.85, speed: 1.5 },
+      { x1: 53.5, y1: 11.5, x2: 53.5, y2: 16.5, r: 0.85, speed: 1.4 }
+    ],
+    lasers: [
+      { x: 48.5, y1: 2, y2: 22, period: 2.5, activeTime: 0.95, offset: 0.3 },
+      { x: 88.5, y1: 2, y2: 18, period: 2.4, activeTime: 0.9, offset: 1.1 }
+    ],
+    spikes: [
+      { x: 38.5, y: 16, count: 2, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 36.5, y: 16 },
+      { x: 68, y: 14 }
+    ],
+    shards: [
+      { x: 24.0, y: 9.2 },
+      { x: 53.5, y: 9.8 },
+      { x: 85.9, y: 4.5 }
+    ]
+  },
+
+  // =========================================================================
+  // CHAPTER VI: THE CROWN OF LIGHT
+  // Theme: The grand finale ascent to the Great Beacon at the apex of the world.
+  // Combines every mechanic in a fair, rhythmic, deeply rewarding final test.
+  // =========================================================================
+  {
+    id: 6,
+    numeral: "Chapter VI",
+    title: "The Crown of Light",
+    subtitle: "At the edge of the eternal night, rekindle the silence.",
+    mechanicsDesc: "The Final Ascent • All Mechanics • The Great Beacon",
+    dashUnlocked: true,
+    bounds: { width: 108, height: 26 },
+    spawn: { x: 4, y: 19 },
+    portal: { x: 100, y: 7 },
+    lightBeams: [
+      { x: 6, width: 6, angle: 0.16, alpha: 0.14 },
+      { x: 38, width: 6, angle: 0.16, alpha: 0.14 },
+      { x: 70, width: 6, angle: 0.16, alpha: 0.16 },
+      { x: 96, width: 10, angle: 0.08, alpha: 0.25 }
+    ],
+    scenery: [
+      { type: "arch", x: 3, y: 15, w: 6, h: 6 },
+      { type: "gear", x: 22, y: 14, r: 4.0, speed: 0.5 },
+      { type: "monolith", x: 36, y: 10, w: 2.5, h: 7 },
+      { type: "gear", x: 55, y: 11, r: 4.5, speed: -0.45 },
+      { type: "pillar", x: 68, y: 5, w: 2.2, h: 9 },
+      { type: "arch", x: 97, y: 1, w: 7, h: 6 },
+      { type: "beacon", x: 100, y: 7 }
+    ],
+    platforms: [
+      { x: 0, y: 0, w: 108, h: 2, style: "stone" },
+      { x: 0, y: 2, w: 2, h: 24, style: "stone" },
+      { x: 106, y: 2, w: 2, h: 24, style: "stone" },
+
+      // Stage 1: Opening launchpad
+      { x: 2, y: 21, w: 8, h: 5, style: "stone" },
+      { x: 26, y: 13, w: 1.8, h: 8, style: "stone" }, // Wall-jump column
+
+      // Checkpoint 1 Sanctuary
+      { x: 34, y: 17, w: 7, h: 9, style: "stone" },
+
+      // Stage 2: Precision Lift + Wall Shaft + Laser
+      { x: 58, y: 9, w: 1.8, h: 9, style: "stone" },
+
+      // Checkpoint 2 Sanctuary
+      { x: 66, y: 14, w: 7, h: 12, style: "stone" },
+
+      // Stage 3: Final Ascent to the Great Beacon
+      { x: 86, y: 9, w: 3, h: 0.9, style: "ledge" },
+      { x: 95, y: 7, w: 11, h: 19, style: "stone" }
+    ],
+    crumblingPlatforms: [
+      { x: 13, y: 20, w: 2.8, h: 0.9 },
+      { x: 19.5, y: 19, w: 2.8, h: 0.9 },
+      { x: 44, y: 16, w: 2.8, h: 0.9 },
+      { x: 76, y: 13, w: 2.8, h: 0.9 }
+    ],
+    movingPlatforms: [
+      { x1: 49.5, y1: 15.5, x2: 54.5, y2: 15.5, w: 3.0, h: 0.9, speed: 1.65 }
+    ],
+    geysers: [
+      { x: 30, y: 20, w: 2.5, h: 8, force: -720 },
+      { x: 61.5, y: 18, w: 2.5, h: 9, force: -740 },
+      { x: 81.5, y: 16, w: 2.5, h: 9, force: -760 },
+      { x: 91, y: 13, w: 2.5, h: 9, force: -760 }
+    ],
+    saws: [
+      { x1: 16.2, y1: 16.5, x2: 16.2, y2: 20.5, r: 0.85, speed: 1.6 },
+      { x1: 52, y1: 11.5, x2: 52, y2: 14.5, r: 0.85, speed: 1.5 },
+      { x1: 87.5, y1: 6.5, x2: 87.5, y2: 8.5, r: 0.75, speed: 1.5 }
+    ],
+    lasers: [
+      { x: 23, y1: 2, y2: 22, period: 2.5, activeTime: 0.9, offset: 0.0 },
+      { x: 47, y1: 2, y2: 22, period: 2.5, activeTime: 0.9, offset: 1.2 },
+      { x: 79, y1: 2, y2: 20, period: 2.4, activeTime: 0.85, offset: 0.5 }
+    ],
+    spikes: [
+      { x: 38, y: 17, count: 2, dir: "up" },
+      { x: 70, y: 14, count: 2, dir: "up" }
+    ],
+    checkpoints: [
+      { x: 35.5, y: 17 },
+      { x: 67.5, y: 14 }
+    ],
+    shards: [
+      { x: 26.9, y: 11.2 },
+      { x: 58.9, y: 7.2 },
+      { x: 87.5, y: 5.0 }
+    ]
+  }
+];
+
+window.UMBRA_LEVELS = UMBRA_LEVELS;
+
+/* ==========================================================================
+   UMBRA: THE SILENT ASCENT — Core Physics, Rendering & State Engine
+   ========================================================================== */
+
+(function () {
+  const TILE = 40;
+  const GRAVITY = 1520;
+  const FALL_GRAVITY = 2120;
+  const MAX_FALL_SPEED = 780;
+  const MOVE_ACCEL = 2200;
+  const MOVE_DECEL = 2600;
+  const MAX_SPEED = 275;
+  const JUMP_VEL = -565;
+  const WALL_SLIDE_SPEED = 125;
+  const WALL_JUMP_VX = 320;
+  const WALL_JUMP_VY = -540;
+  const DASH_SPEED = 660;
+  const DASH_DURATION = 0.16;
+  const DASH_COOLDOWN = 0.45;
+  const COYOTE_TIME = 0.11;
+  const JUMP_BUFFER = 0.13;
+
+  const STORAGE_KEY = 'umbra_silent_ascent_save_v1';
+
+  class UmbraGame {
+    constructor() {
+      this.canvas = document.getElementById('game-canvas');
+      this.ctx = this.canvas.getContext('2d');
+      this.audio = new window.UmbraAudio();
+
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      // Persistent progress
+      this.progress = this.loadProgress();
+
+      // Game State: 'MENU' | 'PLAYING' | 'PAUSED' | 'LEVEL_COMPLETE' | 'VICTORY'
+      this.state = 'MENU';
+      this.currentLevelIdx = 0;
+      this.level = null;
+
+      // Active level runtime entities
+      this.spawnPoint = { x: 0, y: 0 };
+      this.activeCheckpointIdx = -1;
+      this.levelTime = 0;
+      this.levelDeaths = 0;
+      this.totalDeaths = 0;
+      this.collectedShards = new Set();
+
+      // Camera & Screen Effects
+      this.camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
+      this.screenShake = 0;
+      this.flashAlpha = 0;
+      this.scanlinesEnabled = true;
+
+      // Input state
+      this.keys = {
+        left: false,
+        right: false,
+        up: false,
+        jumpPressed: false,
+        jumpHeld: false,
+        dashPressed: false
+      };
+
+      // Ambient & FX particles
+      this.ambientParticles = [];
+      this.fxParticles = [];
+      this.afterimages = [];
+      this.soulWisps = [];
+
+      // Player object
+      this.player = this.createPlayer(100, 100);
+
+      this.lastFrameTime = performance.now();
+      this.globalTime = 0;
+
+      this.bindEvents();
+      this.handleResize();
+      this.initAmbientParticles();
+      this.loadLevel(0, false);
+      this.updateMenuUI();
+
+      requestAnimationFrame((t) => this.loop(t));
+    }
+
+    loadProgress() {
+      const fallback = {
+        unlockedIndex: 0,
+        unlockAll: false,
+        levels: {}
+      };
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return Object.assign(fallback, parsed);
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    saveProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.progress));
+      } catch (e) {}
+    }
+
+    resetProgress() {
+      this.progress = { unlockedIndex: 0, unlockAll: false, levels: {} };
+      this.saveProgress();
+      this.updateMenuUI();
+      this.renderLevelSelect();
+    }
+
+    createPlayer(x, y) {
+      const scarfNodes = [];
+      for (let i = 0; i < 8; i++) {
+        scarfNodes.push({ x: x + 11, y: y + 10 });
+      }
+      return {
+        x: x,
+        y: y,
+        w: 22,
+        h: 34,
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        onGround: false,
+        onWall: 0, // -1 left wall, 1 right wall, 0 none
+        coyoteTimer: 0,
+        jumpBufferTimer: 0,
+        canDoubleJump: true,
+        dashUnlocked: false,
+        canDash: true,
+        dashTimer: 0,
+        dashCooldownTimer: 0,
+        dashDir: 1,
+        wallJumpLockTimer: 0,
+        scaleX: 1,
+        scaleY: 1,
+        runCycle: 0,
+        stepTimer: 0,
+        blinkTimer: 2.5,
+        isBlinking: false,
+        dead: false,
+        deathTimer: 0,
+        scarf: scarfNodes
+      };
+    }
+
+    initAmbientParticles() {
+      this.ambientParticles = [];
+      for (let i = 0; i < 85; i++) {
+        this.ambientParticles.push({
+          x: Math.random() * 2400,
+          y: Math.random() * 1100,
+          r: 0.8 + Math.random() * 2.1,
+          vx: -8 - Math.random() * 18,
+          vy: -4 + Math.random() * 12,
+          alpha: 0.12 + Math.random() * 0.45,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    loadLevel(index, startPlaying = true) {
+      const lvlData = window.UMBRA_LEVELS[index] || window.UMBRA_LEVELS[0];
+      this.currentLevelIdx = index;
+      // Deep clone runtime state for level objects
+      this.level = JSON.parse(JSON.stringify(lvlData));
+
+      // Initialize dynamic states for crumbling & moving platforms & saws
+      this.level.crumblingPlatforms.forEach((cp) => {
+        cp.state = 'idle'; // 'idle' | 'shaking' | 'broken'
+        cp.timer = 0;
+        cp.alpha = 1;
+      });
+      this.level.movingPlatforms.forEach((mp) => {
+        mp.currX = mp.x1 * TILE;
+        mp.currY = mp.y1 * TILE;
+        mp.prevX = mp.currX;
+        mp.prevY = mp.currY;
+        mp.dx = 0;
+        mp.dy = 0;
+        mp.t = 0;
+      });
+      this.level.saws.forEach((saw) => {
+        saw.currX = saw.x1 * TILE;
+        saw.currY = saw.y1 * TILE;
+        saw.angle = 0;
+        saw.t = 0;
+      });
+
+      this.spawnPoint = {
+        x: this.level.spawn.x * TILE,
+        y: (this.level.spawn.y - 1) * TILE
+      };
+      this.activeCheckpointIdx = -1;
+      this.levelTime = 0;
+      this.levelDeaths = 0;
+      this.collectedShards = new Set();
+      this.fxParticles = [];
+      this.afterimages = [];
+      this.soulWisps = [];
+
+      this.respawnPlayer(true);
+
+      // Center camera immediately
+      this.camera.x = this.player.x - this.width / (2 * this.dpr);
+      this.camera.y = this.player.y - this.height / (2 * this.dpr);
+      this.clampCamera();
+
+      if (startPlaying) {
+        this.state = 'PLAYING';
+        this.hideAllOverlays();
+        document.getElementById('hud-bar').classList.remove('hidden');
+        this.showChapterBanner(this.level.numeral, this.level.title, this.level.subtitle);
+      }
+      this.updateHUD();
+    }
+
+    respawnPlayer(instant = false) {
+      const p = this.player;
+      p.x = this.spawnPoint.x;
+      p.y = this.spawnPoint.y;
+      p.vx = 0;
+      p.vy = 0;
+      p.dead = false;
+      p.deathTimer = 0;
+      p.onGround = false;
+      p.onWall = 0;
+      p.coyoteTimer = 0;
+      p.jumpBufferTimer = 0;
+      p.canDoubleJump = true;
+      p.dashUnlocked = Boolean(this.level && this.level.dashUnlocked);
+      p.canDash = true;
+      p.dashTimer = 0;
+      p.dashCooldownTimer = 0;
+      p.scaleX = 1.3;
+      p.scaleY = 0.7;
+
+      for (let i = 0; i < p.scarf.length; i++) {
+        p.scarf[i].x = p.x + p.w / 2;
+        p.scarf[i].y = p.y + 10;
+      }
+
+      // Restore crumbling platforms on respawn so player is never soft-locked
+      if (this.level && this.level.crumblingPlatforms) {
+        this.level.crumblingPlatforms.forEach((cp) => {
+          cp.state = 'idle';
+          cp.timer = 0;
+          cp.alpha = 1;
+        });
+      }
+
+      if (!instant) {
+        this.spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 22, '#ffffff', 160);
+      }
+      this.updateHUD();
+    }
+
+    killPlayer() {
+      if (this.player.dead || this.state !== 'PLAYING') return;
+      const p = this.player;
+      p.dead = true;
+      p.deathTimer = 0.48;
+      this.levelDeaths++;
+      this.totalDeaths++;
+      this.screenShake = 12;
+      this.flashAlpha = 0.38;
+      this.audio.playDeath();
+
+      // Shatter burst
+      this.spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 34, '#ffffff', 280);
+      // Soul wisp flying back to spawnPoint
+      this.soulWisps.push({
+        x: p.x + p.w / 2,
+        y: p.y + p.h / 2,
+        tx: this.spawnPoint.x + p.w / 2,
+        ty: this.spawnPoint.y + p.h / 2,
+        t: 0
+      });
+      this.updateHUD();
+    }
+
+    completeCurrentLevel() {
+      if (this.state !== 'PLAYING') return;
+      this.audio.playLevelComplete();
+      this.flashAlpha = 0.65;
+      this.screenShake = 8;
+
+      const lvlId = this.level.id;
+      const shardCount = this.collectedShards.size;
+      const prev = this.progress.levels[lvlId] || {
+        completed: false,
+        bestTime: null,
+        leastDeaths: null,
+        shards: 0
+      };
+
+      prev.completed = true;
+      prev.bestTime = prev.bestTime === null ? this.levelTime : Math.min(prev.bestTime, this.levelTime);
+      prev.leastDeaths = prev.leastDeaths === null ? this.levelDeaths : Math.min(prev.leastDeaths, this.levelDeaths);
+      prev.shards = Math.max(prev.shards || 0, shardCount);
+      this.progress.levels[lvlId] = prev;
+
+      if (this.currentLevelIdx + 1 > this.progress.unlockedIndex) {
+        this.progress.unlockedIndex = Math.min(window.UMBRA_LEVELS.length - 1, this.currentLevelIdx + 1);
+      }
+      this.saveProgress();
+
+      const rank = this.computeRank(this.levelTime, this.levelDeaths, shardCount);
+
+      if (this.currentLevelIdx >= window.UMBRA_LEVELS.length - 1) {
+        this.state = 'VICTORY';
+        this.populateVictoryModal(rank);
+        document.getElementById('victory-overlay').classList.remove('hidden');
+      } else {
+        this.state = 'LEVEL_COMPLETE';
+        this.populateLevelCompleteModal(rank);
+        document.getElementById('complete-overlay').classList.remove('hidden');
+      }
+    }
+
+    computeRank(time, deaths, shards) {
+      if (deaths === 0 && shards === 3 && time < 65) return 'S+';
+      if (deaths <= 1 && shards >= 2 && time < 85) return 'S';
+      if (deaths <= 4 && time < 120) return 'A';
+      return 'B';
+    }
+
+    formatTime(sec) {
+      const mins = Math.floor(sec / 60);
+      const rem = sec % 60;
+      const whole = Math.floor(rem);
+      const tenths = Math.floor((rem - whole) * 10);
+      return `${String(mins).padStart(2, '0')}:${String(whole).padStart(2, '0')}.${tenths}`;
+    }
+
+    showChapterBanner(numeral, title, subtitle) {
+      const banner = document.getElementById('chapter-banner');
+      document.getElementById('banner-numeral').textContent = numeral;
+      document.getElementById('banner-title').textContent = title;
+      document.getElementById('banner-subtitle').textContent = subtitle;
+      banner.classList.add('visible');
+      clearTimeout(this.bannerTimeout);
+      this.bannerTimeout = setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 3400);
+    }
+
+    spawnBurst(x, y, count, color, maxSpeed) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 25 + Math.random() * maxSpeed;
+        this.fxParticles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 30,
+          r: 1.5 + Math.random() * 3.2,
+          alpha: 1,
+          decay: 1.4 + Math.random() * 1.4,
+          color: color || '#ffffff',
+          gravity: 320
+        });
+      }
+    }
+
+    spawnDust(x, y, count, dirX = 0, dirY = -1) {
+      for (let i = 0; i < count; i++) {
+        this.fxParticles.push({
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: dirX * (30 + Math.random() * 55) + (Math.random() - 0.5) * 50,
+          vy: dirY * (20 + Math.random() * 45) + (Math.random() - 0.5) * 25,
+          r: 1.4 + Math.random() * 2.4,
+          alpha: 0.75,
+          decay: 2.1 + Math.random() * 1.2,
+          color: '#dcdce2',
+          gravity: -20
+        });
+      }
+    }
+
+    // =========================================================================
+    // PHYSICS & COLLISION UPDATE
+    // =========================================================================
+    update(dt) {
+      this.globalTime += dt;
+
+      if (this.screenShake > 0) {
+        this.screenShake = Math.max(0, this.screenShake - dt * 36);
+      }
+      if (this.flashAlpha > 0) {
+        this.flashAlpha = Math.max(0, this.flashAlpha - dt * 1.6);
+      }
+
+      // Always animate ambient particles & level machinery even in menu background
+      this.updateAmbientParticles(dt);
+      this.updateMachinery(dt);
+      this.updateFXParticles(dt);
+
+      if (this.state !== 'PLAYING') {
+        // Gentle idle animation for player on menu screen
+        this.updateScarf(dt);
+        return;
+      }
+
+      this.levelTime += dt;
+      this.updateHUDTimer();
+
+      const p = this.player;
+      if (p.dead) {
+        p.deathTimer -= dt;
+        if (p.deathTimer <= 0) {
+          this.respawnPlayer(false);
+        }
+        return;
+      }
+
+      // Timers
+      if (p.coyoteTimer > 0) p.coyoteTimer -= dt;
+      if (p.jumpBufferTimer > 0) p.jumpBufferTimer -= dt;
+      if (p.dashCooldownTimer > 0) p.dashCooldownTimer -= dt;
+      if (p.wallJumpLockTimer > 0) p.wallJumpLockTimer -= dt;
+
+      // Eye blink
+      p.blinkTimer -= dt;
+      if (p.blinkTimer <= 0) {
+        p.isBlinking = !p.isBlinking;
+        p.blinkTimer = p.isBlinking ? 0.11 : 2.2 + Math.random() * 2.5;
+      }
+
+      // Recover squash & stretch smoothly
+      p.scaleX += (1 - p.scaleX) * Math.min(1, dt * 14);
+      p.scaleY += (1 - p.scaleY) * Math.min(1, dt * 14);
+
+      // Handle Shadow Dash activation
+      if (this.keys.dashPressed) {
+        this.keys.dashPressed = false;
+        if (p.dashUnlocked && p.canDash && p.dashCooldownTimer <= 0 && p.dashTimer <= 0) {
+          p.dashTimer = DASH_DURATION;
+          p.dashCooldownTimer = DASH_COOLDOWN;
+          p.canDash = false;
+          const inputDir = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+          p.dashDir = inputDir !== 0 ? inputDir : p.facing;
+          p.facing = p.dashDir;
+          p.vx = p.dashDir * DASH_SPEED;
+          p.vy = 0;
+          p.scaleX = 1.42;
+          p.scaleY = 0.65;
+          this.screenShake = 4.5;
+          this.audio.playDash();
+          this.spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 14, '#ffffff', 140);
+          this.updateHUD();
+        }
+      }
+
+      if (p.dashTimer > 0) {
+        p.dashTimer -= dt;
+        p.vx = p.dashDir * DASH_SPEED;
+        p.vy = 0;
+        // Leave ghostly monochrome afterimage
+        this.afterimages.push({
+          x: p.x,
+          y: p.y,
+          w: p.w,
+          h: p.h,
+          alpha: 0.55
+        });
+      } else {
+        // Horizontal movement
+        const moveInput = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+        if (p.wallJumpLockTimer <= 0) {
+          if (moveInput !== 0) {
+            p.facing = moveInput;
+            p.vx += moveInput * MOVE_ACCEL * dt;
+            if (Math.abs(p.vx) > MAX_SPEED) {
+              p.vx = moveInput * MAX_SPEED;
+            }
+          } else {
+            const decel = MOVE_DECEL * dt;
+            if (Math.abs(p.vx) <= decel) {
+              p.vx = 0;
+            } else {
+              p.vx -= Math.sign(p.vx) * decel;
+            }
+          }
+        }
+
+        // Gravity & variable jump height
+        const g = p.vy < 0 && this.keys.jumpHeld ? GRAVITY : FALL_GRAVITY;
+        p.vy = Math.min(MAX_FALL_SPEED, p.vy + g * dt);
+
+        // Updraft Geysers check
+        this.level.geysers.forEach((gey) => {
+          const gx = gey.x * TILE;
+          const gy = (gey.y - gey.h) * TILE;
+          const gw = gey.w * TILE;
+          const gh = gey.h * TILE;
+          if (this.aabb(p.x, p.y, p.w, p.h, gx, gy, gw, gh)) {
+            p.vy = Math.max(gey.force, p.vy - 2400 * dt);
+            p.canDoubleJump = true;
+            p.canDash = true;
+            if (Math.random() < 0.35) {
+              this.spawnDust(p.x + p.w / 2, p.y + p.h, 1, 0, -1.5);
+            }
+          }
+        });
+      }
+
+      // Jump execution (Ground / Coyote / Wall Jump / Air Burst Double Jump)
+      if (p.jumpBufferTimer > 0) {
+        if (p.coyoteTimer > 0) {
+          // Normal ground jump
+          p.vy = JUMP_VEL;
+          p.onGround = false;
+          p.coyoteTimer = 0;
+          p.jumpBufferTimer = 0;
+          p.scaleX = 0.74;
+          p.scaleY = 1.32;
+          this.audio.playJump(false);
+          this.spawnDust(p.x + p.w / 2, p.y + p.h, 8, 0, -1);
+        } else if (p.onWall !== 0) {
+          // Wall Jump
+          p.vy = WALL_JUMP_VY;
+          p.vx = -p.onWall * WALL_JUMP_VX;
+          p.facing = -p.onWall;
+          p.wallJumpLockTimer = 0.14;
+          p.jumpBufferTimer = 0;
+          p.canDoubleJump = true;
+          p.scaleX = 0.72;
+          p.scaleY = 1.34;
+          this.audio.playJump(true);
+          this.spawnDust(p.onWall === 1 ? p.x + p.w : p.x, p.y + p.h / 2, 10, -p.onWall, -0.5);
+        } else if (p.canDoubleJump) {
+          // Mid-air Soul Jump (Double Jump)
+          p.vy = JUMP_VEL * 0.9;
+          p.canDoubleJump = false;
+          p.jumpBufferTimer = 0;
+          p.scaleX = 0.78;
+          p.scaleY = 1.28;
+          this.audio.playJump(true);
+          this.spawnDust(p.x + p.w / 2, p.y + p.h, 10, 0, 0.5);
+        }
+      }
+
+      // Integrate and resolve collisions
+      const solids = this.getActiveSolids();
+
+      // Horizontal step
+      p.x += p.vx * dt;
+      p.onWall = 0;
+      for (let i = 0; i < solids.length; i++) {
+        const s = solids[i];
+        if (this.aabb(p.x, p.y, p.w, p.h, s.x, s.y, s.w, s.h)) {
+          if (p.vx > 0) {
+            p.x = s.x - p.w;
+            p.vx = 0;
+            if (!p.onGround && s.wallClimb !== false) p.onWall = 1;
+          } else if (p.vx < 0) {
+            p.x = s.x + s.w;
+            p.vx = 0;
+            if (!p.onGround && s.wallClimb !== false) p.onWall = -1;
+          }
+        }
+      }
+
+      // Check if pressing against wall even when vx == 0
+      if (!p.onGround && p.onWall === 0) {
+        for (let i = 0; i < solids.length; i++) {
+          const s = solids[i];
+          if (s.wallClimb === false) continue;
+          if (this.keys.right && this.aabb(p.x + 1.5, p.y + 4, p.w, p.h - 8, s.x, s.y, s.w, s.h)) {
+            p.onWall = 1;
+            break;
+          }
+          if (this.keys.left && this.aabb(p.x - 1.5, p.y + 4, p.w, p.h - 8, s.x, s.y, s.w, s.h)) {
+            p.onWall = -1;
+            break;
+          }
+        }
+      }
+
+      // Wall slide clamping
+      if (p.onWall !== 0 && p.vy > WALL_SLIDE_SPEED) {
+        p.vy = WALL_SLIDE_SPEED;
+        if (Math.random() < 0.35) {
+          this.spawnDust(p.onWall === 1 ? p.x + p.w : p.x, p.y + p.h * 0.7, 1, -p.onWall * 0.4, -0.5);
+        }
+      }
+
+      // Vertical step
+      const wasOnGround = p.onGround;
+      const preLandVy = p.vy;
+      p.y += p.vy * dt;
+      p.onGround = false;
+      let ridingPlatform = null;
+
+      for (let i = 0; i < solids.length; i++) {
+        const s = solids[i];
+        if (this.aabb(p.x, p.y, p.w, p.h, s.x, s.y, s.w, s.h)) {
+          if (p.vy >= 0) {
+            p.y = s.y - p.h;
+            p.vy = 0;
+            p.onGround = true;
+            ridingPlatform = s;
+            if (s.crumbleRef && s.crumbleRef.state === 'idle') {
+              s.crumbleRef.state = 'shaking';
+              s.crumbleRef.timer = 0.55;
+            }
+          } else if (p.vy < 0) {
+            p.y = s.y + s.h;
+            p.vy = 0;
+          }
+        }
+      }
+
+      if (p.onGround) {
+        p.coyoteTimer = COYOTE_TIME;
+        p.canDoubleJump = true;
+        if (!p.canDash) {
+          p.canDash = true;
+          this.updateHUD();
+        }
+        if (!wasOnGround && preLandVy > 140) {
+          const impact = Math.min(1, preLandVy / 650);
+          p.scaleX = 1 + impact * 0.34;
+          p.scaleY = 1 - impact * 0.28;
+          this.audio.playLand(impact);
+          this.spawnDust(p.x + p.w / 2, p.y + p.h, Math.floor(5 + impact * 8), 0, -0.5);
+        }
+        // Carry player with moving platform
+        if (ridingPlatform && ridingPlatform.moveRef) {
+          p.x += ridingPlatform.moveRef.dx;
+          p.y += ridingPlatform.moveRef.dy;
+        }
+      }
+
+      // Running cycle & footsteps
+      if (p.onGround && Math.abs(p.vx) > 25) {
+        p.runCycle += dt * (Math.abs(p.vx) / 22);
+        p.stepTimer -= dt;
+        if (p.stepTimer <= 0) {
+          p.stepTimer = 0.22;
+          this.audio.playStep();
+          this.spawnDust(p.x + p.w / 2, p.y + p.h, 2, -Math.sign(p.vx) * 0.5, -0.3);
+        }
+      } else {
+        p.runCycle = 0;
+        p.stepTimer = 0.05;
+      }
+
+      this.updateScarf(dt);
+      this.checkWorldInteractions();
+      this.updateCamera(dt);
+    }
+
+    updateScarf(dt) {
+      const p = this.player;
+      const anchorX = p.x + p.w / 2 - p.facing * 4;
+      const anchorY = p.y + 11;
+      p.scarf[0].x = anchorX;
+      p.scarf[0].y = anchorY;
+
+      const windX = -p.facing * 26 - p.vx * 0.08 + Math.sin(this.globalTime * 5) * 12;
+      const windY = -12 - p.vy * 0.04 + Math.cos(this.globalTime * 4) * 8;
+
+      for (let i = 1; i < p.scarf.length; i++) {
+        const prev = p.scarf[i - 1];
+        const curr = p.scarf[i];
+        curr.x += windX * dt;
+        curr.y += windY * dt;
+
+        const dx = curr.x - prev.x;
+        const dy = curr.y - prev.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const maxDist = 4.2;
+        if (dist > maxDist) {
+          curr.x = prev.x + (dx / dist) * maxDist;
+          curr.y = prev.y + (dy / dist) * maxDist;
+        }
+      }
+    }
+
+    updateMachinery(dt) {
+      if (!this.level) return;
+
+      // Crumbling platforms
+      this.level.crumblingPlatforms.forEach((cp) => {
+        if (cp.state === 'shaking') {
+          cp.timer -= dt;
+          if (cp.timer <= 0) {
+            cp.state = 'broken';
+            cp.timer = 2.6; // Respawns after 2.6s
+            this.spawnBurst((cp.x + cp.w / 2) * TILE, (cp.y + cp.h / 2) * TILE, 14, '#9a9aa6', 110);
+            this.audio.playLand(0.4);
+          }
+        } else if (cp.state === 'broken') {
+          cp.timer -= dt;
+          cp.alpha = Math.max(0, 1 - cp.timer / 2.6);
+          if (cp.timer <= 0) {
+            cp.state = 'idle';
+            cp.alpha = 1;
+          }
+        }
+      });
+
+      // Moving platforms
+      this.level.movingPlatforms.forEach((mp) => {
+        mp.prevX = mp.currX;
+        mp.prevY = mp.currY;
+        mp.t += dt * mp.speed;
+        const factor = (Math.sin(mp.t - Math.PI / 2) + 1) * 0.5;
+        mp.currX = (mp.x1 + (mp.x2 - mp.x1) * factor) * TILE;
+        mp.currY = (mp.y1 + (mp.y2 - mp.y1) * factor) * TILE;
+        mp.dx = mp.currX - mp.prevX;
+        mp.dy = mp.currY - mp.prevY;
+      });
+
+      // Rotating saws
+      this.level.saws.forEach((saw) => {
+        saw.t += dt * saw.speed;
+        saw.angle += dt * 9.5;
+        const factor = (Math.sin(saw.t) + 1) * 0.5;
+        saw.currX = (saw.x1 + (saw.x2 - saw.x1) * factor) * TILE;
+        saw.currY = (saw.y1 + (saw.y2 - saw.y1) * factor) * TILE;
+      });
+    }
+
+    updateAmbientParticles(dt) {
+      const worldW = (this.level ? this.level.bounds.width : 90) * TILE;
+      const worldH = (this.level ? this.level.bounds.height : 24) * TILE;
+      for (let i = 0; i < this.ambientParticles.length; i++) {
+        const pt = this.ambientParticles[i];
+        pt.x += pt.vx * dt;
+        pt.y += (pt.vy + Math.sin(this.globalTime * 1.5 + pt.phase) * 8) * dt;
+        if (pt.x < 0) pt.x += worldW;
+        if (pt.x > worldW) pt.x -= worldW;
+        if (pt.y < 0) pt.y += worldH;
+        if (pt.y > worldH) pt.y -= worldH;
+      }
+    }
+
+    updateFXParticles(dt) {
+      for (let i = this.fxParticles.length - 1; i >= 0; i--) {
+        const pt = this.fxParticles[i];
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.vy += (pt.gravity || 0) * dt;
+        pt.alpha -= pt.decay * dt;
+        if (pt.alpha <= 0) {
+          this.fxParticles.splice(i, 1);
+        }
+      }
+      for (let i = this.afterimages.length - 1; i >= 0; i--) {
+        this.afterimages[i].alpha -= dt * 3.4;
+        if (this.afterimages[i].alpha <= 0) {
+          this.afterimages.splice(i, 1);
+        }
+      }
+      for (let i = this.soulWisps.length - 1; i >= 0; i--) {
+        const w = this.soulWisps[i];
+        w.t += dt * 2.4;
+        if (w.t >= 1) {
+          this.soulWisps.splice(i, 1);
+        }
+      }
+    }
+
+    getActiveSolids() {
+      const list = [];
+      this.level.platforms.forEach((pl) => {
+        list.push({
+          x: pl.x * TILE,
+          y: pl.y * TILE,
+          w: pl.w * TILE,
+          h: pl.h * TILE,
+          wallClimb: pl.style !== 'ledge'
+        });
+      });
+      this.level.crumblingPlatforms.forEach((cp) => {
+        if (cp.state !== 'broken') {
+          list.push({
+            x: cp.x * TILE,
+            y: cp.y * TILE,
+            w: cp.w * TILE,
+            h: cp.h * TILE,
+            wallClimb: false,
+            crumbleRef: cp
+          });
+        }
+      });
+      this.level.movingPlatforms.forEach((mp) => {
+        list.push({
+          x: mp.currX,
+          y: mp.currY,
+          w: mp.w * TILE,
+          h: mp.h * TILE,
+          wallClimb: false,
+          moveRef: mp
+        });
+      });
+      return list;
+    }
+
+    checkWorldInteractions() {
+      const p = this.player;
+      // Forgiving inner hazard hitbox
+      const hx = p.x + 4;
+      const hy = p.y + 4;
+      const hw = p.w - 8;
+      const hh = p.h - 8;
+
+      // Void Pit Death
+      if (p.y > (this.level.bounds.height - 1.5) * TILE) {
+        this.killPlayer();
+        return;
+      }
+
+      // Spikes check
+      for (let i = 0; i < this.level.spikes.length; i++) {
+        const sp = this.level.spikes[i];
+        const sx = sp.x * TILE + 4;
+        const sy = sp.y * TILE - 14;
+        const sw = sp.count * TILE * 0.5 - 8;
+        const sh = 14;
+        if (this.aabb(hx, hy, hw, hh, sx, sy, sw, sh)) {
+          this.killPlayer();
+          return;
+        }
+      }
+
+      // Rotating Saws check
+      for (let i = 0; i < this.level.saws.length; i++) {
+        const saw = this.level.saws[i];
+        const sr = saw.r * TILE * 0.82;
+        const cx = Math.max(hx, Math.min(saw.currX, hx + hw));
+        const cy = Math.max(hy, Math.min(saw.currY, hy + hh));
+        if (Math.hypot(saw.currX - cx, saw.currY - cy) < sr) {
+          this.killPlayer();
+          return;
+        }
+      }
+
+      // Timed Eclipse Laser Beams check
+      for (let i = 0; i < this.level.lasers.length; i++) {
+        const lz = this.level.lasers[i];
+        const cycle = (this.globalTime + lz.offset) % lz.period;
+        const isActive = cycle < lz.activeTime;
+        if (isActive) {
+          const lx = lz.x * TILE - 5;
+          const ly = lz.y1 * TILE;
+          const lw = 10;
+          const lh = (lz.y2 - lz.y1) * TILE;
+          if (this.aabb(hx, hy, hw, hh, lx, ly, lw, lh)) {
+            this.killPlayer();
+            return;
+          }
+        }
+      }
+
+      // Checkpoints activation
+      this.level.checkpoints.forEach((cp, idx) => {
+        const cx = cp.x * TILE;
+        const cy = (cp.y - 1.4) * TILE;
+        if (this.aabb(p.x, p.y, p.w, p.h, cx - 18, cy - 18, 36, 56)) {
+          if (this.activeCheckpointIdx !== idx) {
+            this.activeCheckpointIdx = idx;
+            this.spawnPoint = { x: cx - p.w / 2, y: cp.y * TILE - p.h };
+            this.audio.playCheckpoint();
+            this.spawnBurst(cx, cy, 24, '#ffffff', 180);
+            this.updateHUD();
+          }
+        }
+      });
+
+      // Collectible Lumen Shards
+      this.level.shards.forEach((sh, idx) => {
+        if (this.collectedShards.has(idx)) return;
+        const sx = sh.x * TILE;
+        const sy = sh.y * TILE;
+        if (Math.hypot(p.x + p.w / 2 - sx, p.y + p.h / 2 - sy) < 24) {
+          this.collectedShards.add(idx);
+          this.audio.playShard();
+          this.spawnBurst(sx, sy, 20, '#ffffff', 160);
+          this.updateHUD();
+        }
+      });
+
+      // Exit Portal check
+      const px = this.level.portal.x * TILE;
+      const py = (this.level.portal.y - 1.2) * TILE;
+      if (Math.hypot(p.x + p.w / 2 - px, p.y + p.h / 2 - py) < 34) {
+        this.completeCurrentLevel();
+      }
+    }
+
+    aabb(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    updateCamera(dt) {
+      const viewW = this.width / this.dpr;
+      const viewH = this.height / this.dpr;
+      const p = this.player;
+      this.camera.targetX = p.x + p.w / 2 - viewW * 0.42 + p.facing * 55;
+      this.camera.targetY = p.y + p.h / 2 - viewH * 0.54;
+
+      this.camera.x += (this.camera.targetX - this.camera.x) * Math.min(1, dt * 6.5);
+      this.camera.y += (this.camera.targetY - this.camera.y) * Math.min(1, dt * 6.5);
+      this.clampCamera();
+    }
+
+    clampCamera() {
+      if (!this.level) return;
+      const viewW = this.width / this.dpr;
+      const viewH = this.height / this.dpr;
+      const maxX = Math.max(0, this.level.bounds.width * TILE - viewW);
+      const maxY = Math.max(0, this.level.bounds.height * TILE - viewH);
+      this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
+      this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
+    }
+
+    // =========================================================================
+    // ATMOSPHERIC MONOCHROME RENDERING PIPELINE
+    // =========================================================================
+    render() {
+      const ctx = this.ctx;
+      const viewW = this.width / this.dpr;
+      const viewH = this.height / this.dpr;
+
+      ctx.save();
+      ctx.scale(this.dpr, this.dpr);
+
+      // 1. Deep monochrome sky/cavern gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, viewH);
+      bgGrad.addColorStop(0, '#040406');
+      bgGrad.addColorStop(0.55, '#0c0c11');
+      bgGrad.addColorStop(1, '#16161f');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, viewW, viewH);
+
+      // 2. Distant Parallax Silhouettes (Layer 0.2x & 0.45x)
+      this.renderParallaxBackground(ctx, viewW, viewH);
+
+      // Apply camera transform + screen shake
+      const shakeX = (Math.random() - 0.5) * this.screenShake;
+      const shakeY = (Math.random() - 0.5) * this.screenShake;
+      ctx.save();
+      ctx.translate(-Math.round(this.camera.x + shakeX), -Math.round(this.camera.y + shakeY));
+
+      // 3. Volumetric Light Shafts (God Rays)
+      this.renderLightBeams(ctx);
+
+      // 4. Midground Scenery & Non-Verbal Tutorial Glyphs
+      this.renderScenery(ctx);
+
+      // 5. Updraft Geysers & Timed Eclipse Lasers
+      this.renderGeysers(ctx);
+      this.renderLasers(ctx);
+
+      // 6. Platforms (Stone, Ledges, Crumbling, Moving)
+      this.renderPlatforms(ctx);
+
+      // 7. Deadly Hazards (Spikes & Rotating Sawblades)
+      this.renderHazards(ctx);
+
+      // 8. Checkpoints, Collectible Shards & Exit Portal
+      this.renderInteractiveObjects(ctx);
+
+      // 9. Ghost Afterimages & Player Character Silhouette
+      this.renderPlayer(ctx);
+
+      // 10. Foreground Particles & Rolling Ground Mist
+      this.renderParticlesAndMist(ctx, viewW, viewH);
+
+      ctx.restore();
+
+      // Screen Flash on Death / Portal / Checkpoint
+      if (this.flashAlpha > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.flashAlpha})`;
+        ctx.fillRect(0, 0, viewW, viewH);
+      }
+
+      ctx.restore();
+    }
+
+    renderParallaxBackground(ctx, viewW, viewH) {
+      // Distant pale moon / halo
+      const moonX = viewW * 0.72 - this.camera.x * 0.04;
+      const moonY = viewH * 0.24 - this.camera.y * 0.03;
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, 8, moonX, moonY, 170);
+      moonGlow.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+      moonGlow.addColorStop(0.35, 'rgba(255, 255, 255, 0.06)');
+      moonGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 170, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(240, 240, 248, 0.14)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Far gothic spires silhouette (parallax 0.15)
+      ctx.fillStyle = '#09090d';
+      const offset1 = -(this.camera.x * 0.15) % 320;
+      for (let x = offset1 - 320; x < viewW + 320; x += 160) {
+        const h = 140 + ((Math.abs(Math.sin(x * 0.013)) * 130) | 0);
+        ctx.fillRect(x, viewH - h, 46, h);
+        ctx.beginPath();
+        ctx.moveTo(x - 6, viewH - h);
+        ctx.lineTo(x + 23, viewH - h - 55);
+        ctx.lineTo(x + 52, viewH - h);
+        ctx.fill();
+      }
+
+      // Mid-distance ruined arches & pillars (parallax 0.32)
+      ctx.fillStyle = '#0f0f15';
+      const offset2 = -(this.camera.x * 0.32) % 260;
+      for (let x = offset2 - 260; x < viewW + 260; x += 260) {
+        ctx.fillRect(x + 20, viewH - 220, 24, 220);
+        ctx.fillRect(x + 140, viewH - 180, 20, 180);
+        ctx.fillRect(x + 20, viewH - 220, 140, 14);
+      }
+    }
+
+    renderLightBeams(ctx) {
+      if (!this.level || !this.level.lightBeams) return;
+      const worldH = this.level.bounds.height * TILE;
+      ctx.save();
+      this.level.lightBeams.forEach((beam) => {
+        const bx = beam.x * TILE;
+        const bw = beam.w ? beam.w * TILE : beam.width * TILE;
+        const shift = worldH * Math.tan(beam.angle || 0.2);
+
+        const grad = ctx.createLinearGradient(bx, 0, bx + shift, worldH);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${beam.alpha || 0.12})`);
+        grad.addColorStop(0.7, `rgba(255, 255, 255, ${(beam.alpha || 0.12) * 0.35})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(bx, 0);
+        ctx.lineTo(bx + bw, 0);
+        ctx.lineTo(bx + bw + shift, worldH);
+        ctx.lineTo(bx + shift, worldH);
+        ctx.closePath();
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    renderScenery(ctx) {
+      if (!this.level || !this.level.scenery) return;
+      ctx.save();
+      this.level.scenery.forEach((item) => {
+        const x = item.x * TILE;
+        const y = item.y * TILE;
+
+        if (item.type === 'pillar') {
+          const w = (item.w || 1.5) * TILE;
+          const h = (item.h || 10) * TILE;
+          ctx.fillStyle = '#14141c';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+          ctx.strokeRect(x + 4, y, w - 8, h);
+        } else if (item.type === 'arch') {
+          const w = (item.w || 5) * TILE;
+          const h = (item.h || 6) * TILE;
+          ctx.fillStyle = '#15151e';
+          ctx.fillRect(x, y, 16, h);
+          ctx.fillRect(x + w - 16, y, 16, h);
+          ctx.fillRect(x - 6, y, w + 12, 18);
+        } else if (item.type === 'chain') {
+          const h = (item.h || 8) * TILE;
+          ctx.strokeStyle = 'rgba(200, 200, 212, 0.25)';
+          ctx.lineWidth = 2.5;
+          for (let cy = 0; cy < h; cy += 14) {
+            ctx.strokeRect(x - 3, y + cy, 6, 10);
+          }
+        } else if (item.type === 'monolith') {
+          const w = (item.w || 2) * TILE;
+          const h = (item.h || 6) * TILE;
+          ctx.fillStyle = '#181822';
+          ctx.beginPath();
+          ctx.moveTo(x, y + h);
+          ctx.lineTo(x + 6, y + 14);
+          ctx.lineTo(x + w / 2, y);
+          ctx.lineTo(x + w - 6, y + 14);
+          ctx.lineTo(x + w, y + h);
+          ctx.closePath();
+          ctx.fill();
+          // Glowing geometric rune on monolith
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + h * 0.4, 12, 0, Math.PI * 2);
+          ctx.moveTo(x + w / 2, y + h * 0.4 - 22);
+          ctx.lineTo(x + w / 2, y + h * 0.4 + 22);
+          ctx.stroke();
+        } else if (item.type === 'gear') {
+          const r = (item.r || 3) * TILE;
+          const angle = this.globalTime * (item.speed || 0.4);
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+          ctx.fillStyle = 'rgba(22, 22, 30, 0.85)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.lineWidth = 2;
+          const teeth = 12;
+          for (let i = 0; i < teeth; i++) {
+            ctx.rotate((Math.PI * 2) / teeth);
+            ctx.fillRect(-8, -r - 10, 16, 14);
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#09090d';
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (item.type === 'tree') {
+          ctx.strokeStyle = '#191922';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(x, y + 160);
+          ctx.lineTo(x + 8, y + 60);
+          ctx.lineTo(x - 24, y + 10);
+          ctx.moveTo(x + 8, y + 75);
+          ctx.lineTo(x + 38, y + 25);
+          ctx.stroke();
+        } else if (item.type === 'shrine') {
+          // Ancient Dash Shrine
+          const glow = ctx.createRadialGradient(x, y, 4, x, y, 65);
+          glow.addColorStop(0, 'rgba(255,255,255,0.45)');
+          glow.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(x, y, 65, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, y - 24);
+          ctx.lineTo(x + 16, y);
+          ctx.lineTo(x, y + 24);
+          ctx.lineTo(x - 16, y);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (item.type === 'glyph') {
+          this.renderEnvironmentalGlyph(ctx, x, y, item.glyph);
+        }
+      });
+      ctx.restore();
+    }
+
+    renderEnvironmentalGlyph(ctx, x, y, kind) {
+      // Non-verbal carved stone glyphs showing visual mechanics in-world
+      ctx.save();
+      const pulse = 0.45 + Math.sin(this.globalTime * 2.5) * 0.15;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${pulse})`;
+      ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+      ctx.lineWidth = 1.6;
+
+      // Stone tablet frame
+      ctx.strokeRect(x - 28, y - 22, 56, 44);
+
+      if (kind === 'MOVE') {
+        // Left & right arrows
+        ctx.beginPath();
+        ctx.moveTo(x - 16, y);
+        ctx.lineTo(x - 6, y - 7);
+        ctx.lineTo(x - 6, y + 7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(x + 16, y);
+        ctx.lineTo(x + 6, y - 7);
+        ctx.lineTo(x + 6, y + 7);
+        ctx.closePath();
+        ctx.fill();
+      } else if (kind === 'JUMP') {
+        // Parabolic jump arc
+        ctx.beginPath();
+        ctx.arc(x, y + 8, 14, Math.PI, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (kind === 'LANTERN') {
+        // Diamond lantern icon
+        ctx.beginPath();
+        ctx.moveTo(x, y - 10);
+        ctx.lineTo(x + 8, y);
+        ctx.lineTo(x, y + 10);
+        ctx.lineTo(x - 8, y);
+        ctx.closePath();
+        ctx.stroke();
+      } else if (kind === 'CRUMBLE') {
+        // Fractured blocks
+        ctx.strokeRect(x - 14, y - 6, 12, 8);
+        ctx.strokeRect(x + 2, y + 1, 12, 8);
+      } else if (kind === 'LIFT') {
+        // Platform with bidirectional arrows
+        ctx.fillRect(x - 14, y + 4, 28, 4);
+        ctx.beginPath();
+        ctx.moveTo(x, y - 10);
+        ctx.lineTo(x - 6, y - 2);
+        ctx.lineTo(x + 6, y - 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (kind === 'WALL') {
+        // Wall jump zig-zag arrows
+        ctx.beginPath();
+        ctx.moveTo(x - 14, y - 12);
+        ctx.lineTo(x - 14, y + 12);
+        ctx.moveTo(x + 14, y - 12);
+        ctx.lineTo(x + 14, y + 12);
+        ctx.moveTo(x - 12, y + 8);
+        ctx.lineTo(x + 12, y - 2);
+        ctx.lineTo(x - 12, y - 10);
+        ctx.stroke();
+      } else if (kind === 'DASH') {
+        // Horizontal dash streak lines +Shift/X glyph
+        ctx.beginPath();
+        ctx.moveTo(x - 18, y - 5);
+        ctx.lineTo(x + 8, y - 5);
+        ctx.moveTo(x - 14, y + 5);
+        ctx.lineTo(x + 12, y + 5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + 15, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (kind === 'GEYSER') {
+        // Upward wind waves
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.moveTo(x + i * 9, y + 10);
+          ctx.lineTo(x + i * 9, y - 10);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    renderGeysers(ctx) {
+      if (!this.level || !this.level.geysers) return;
+      ctx.save();
+      this.level.geysers.forEach((gey) => {
+        const gx = gey.x * TILE;
+        const gy = (gey.y - gey.h) * TILE;
+        const gw = gey.w * TILE;
+        const gh = gey.h * TILE;
+
+        const grad = ctx.createLinearGradient(gx, gy + gh, gx, gy);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.24)');
+        grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.08)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx, gy, gw, gh);
+
+        // Rising wind streaks inside geyser
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+          const sx = gx + ((i + 0.5) / 6) * gw;
+          const offset = ((this.globalTime * 260 + i * 70) % gh);
+          const sy = gy + gh - offset;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx, Math.max(gy, sy - 28));
+          ctx.stroke();
+        }
+      });
+      ctx.restore();
+    }
+
+    renderLasers(ctx) {
+      if (!this.level || !this.level.lasers) return;
+      ctx.save();
+      this.level.lasers.forEach((lz) => {
+        const lx = lz.x * TILE;
+        const ly1 = lz.y1 * TILE;
+        const ly2 = lz.y2 * TILE;
+        const cycle = (this.globalTime + lz.offset) % lz.period;
+        const isActive = cycle < lz.activeTime;
+        const isWarmup = !isActive && cycle > lz.period - 0.55;
+
+        // Emitter nodes
+        ctx.fillStyle = '#e2e2ea';
+        ctx.fillRect(lx - 8, ly1 - 4, 16, 10);
+        ctx.fillRect(lx - 8, ly2 - 6, 16, 10);
+
+        if (isActive) {
+          // Deadly bright Eclipse beam
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+          ctx.fillRect(lx - 14, ly1, 28, ly2 - ly1);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(lx - 4, ly1, 8, ly2 - ly1);
+        } else if (isWarmup) {
+          // Telegraph warning line
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.setLineDash([6, 6]);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(lx, ly1);
+          ctx.lineTo(lx, ly2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      });
+      ctx.restore();
+    }
+
+    renderPlatforms(ctx) {
+      if (!this.level) return;
+      ctx.save();
+
+      // Solid Stone & Ledges
+      this.level.platforms.forEach((pl) => {
+        const x = pl.x * TILE;
+        const y = pl.y * TILE;
+        const w = pl.w * TILE;
+        const h = pl.h * TILE;
+
+        ctx.fillStyle = '#07070a';
+        ctx.fillRect(x, y, w, h);
+
+        // Top rim highlight for crisp readability
+        ctx.fillStyle = pl.style === 'ledge' ? '#d8d8e2' : '#9c9ca8';
+        ctx.fillRect(x, y, w, 2.5);
+
+        // Subtle inner stone border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      });
+
+      // Crumbling Platforms
+      this.level.crumblingPlatforms.forEach((cp) => {
+        if (cp.state === 'broken') {
+          // Ghostly outline while regenerating
+          ctx.strokeStyle = `rgba(255, 255, 255, ${cp.alpha * 0.25})`;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(cp.x * TILE, cp.y * TILE, cp.w * TILE, cp.h * TILE);
+          ctx.setLineDash([]);
+          return;
+        }
+        const shakeX = cp.state === 'shaking' ? (Math.random() - 0.5) * 5 : 0;
+        const shakeY = cp.state === 'shaking' ? (Math.random() - 0.5) * 4 : 0;
+        const x = cp.x * TILE + shakeX;
+        const y = cp.y * TILE + shakeY;
+        const w = cp.w * TILE;
+        const h = cp.h * TILE;
+
+        ctx.fillStyle = '#1d1d26';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y, w, h);
+
+        // Crack lines
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.3, y);
+        ctx.lineTo(x + w * 0.4, y + h * 0.6);
+        ctx.moveTo(x + w * 0.7, y);
+        ctx.lineTo(x + w * 0.62, y + h * 0.7);
+        ctx.stroke();
+      });
+
+      // Moving Platforms
+      this.level.movingPlatforms.forEach((mp) => {
+        // Track line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo((mp.x1 + mp.w / 2) * TILE, (mp.y1 + mp.h / 2) * TILE);
+        ctx.lineTo((mp.x2 + mp.w / 2) * TILE, (mp.y2 + mp.h / 2) * TILE);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const x = mp.currX;
+        const y = mp.currY;
+        const w = mp.w * TILE;
+        const h = mp.h * TILE;
+
+        ctx.fillStyle = '#181822';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#f0f0f5';
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(x, y, w, h);
+
+        // Glowing core node in center of moving lift
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + w / 2, y + h / 2, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    renderHazards(ctx) {
+      if (!this.level) return;
+      ctx.save();
+
+      // Deadly Spikes
+      ctx.fillStyle = '#e5e5ee';
+      this.level.spikes.forEach((sp) => {
+        const startX = sp.x * TILE;
+        const baseY = sp.y * TILE;
+        const toothW = TILE * 0.5;
+        const toothH = 16;
+        for (let i = 0; i < sp.count; i++) {
+          const sx = startX + i * toothW;
+          ctx.beginPath();
+          ctx.moveTo(sx, baseY);
+          ctx.lineTo(sx + toothW / 2, baseY - toothH);
+          ctx.lineTo(sx + toothW, baseY);
+          ctx.closePath();
+          ctx.fill();
+        }
+      });
+
+      // Rotating Sawblades
+      this.level.saws.forEach((saw) => {
+        const r = saw.r * TILE;
+        // Track rail
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(saw.x1 * TILE, saw.y1 * TILE);
+        ctx.lineTo(saw.x2 * TILE, saw.y2 * TILE);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(saw.currX, saw.currY);
+        ctx.rotate(saw.angle);
+
+        const teeth = 14;
+        ctx.fillStyle = '#f2f2f8';
+        ctx.beginPath();
+        for (let i = 0; i < teeth; i++) {
+          const a1 = (i / teeth) * Math.PI * 2;
+          const a2 = ((i + 0.5) / teeth) * Math.PI * 2;
+          const a3 = ((i + 1) / teeth) * Math.PI * 2;
+          ctx.lineTo(Math.cos(a1) * (r * 0.76), Math.sin(a1) * (r * 0.76));
+          ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r);
+          ctx.lineTo(Math.cos(a3) * (r * 0.76), Math.sin(a3) * (r * 0.76));
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#09090d';
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    renderInteractiveObjects(ctx) {
+      if (!this.level) return;
+      ctx.save();
+
+      // Lantern Checkpoints
+      this.level.checkpoints.forEach((cp, idx) => {
+        const cx = cp.x * TILE;
+        const baseY = cp.y * TILE;
+        const active = this.activeCheckpointIdx === idx;
+
+        // Post
+        ctx.strokeStyle = active ? '#ffffff' : '#6c6c78';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, baseY);
+        ctx.lineTo(cx, baseY - 46);
+        ctx.stroke();
+
+        // Lantern head
+        const ly = baseY - 50;
+        if (active) {
+          const glow = ctx.createRadialGradient(cx, ly, 2, cx, ly, 58);
+          glow.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
+          glow.addColorStop(0.4, 'rgba(255, 255, 255, 0.18)');
+          glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(cx, ly, 58, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = active ? '#ffffff' : '#3a3a44';
+        ctx.beginPath();
+        ctx.moveTo(cx, ly - 10);
+        ctx.lineTo(cx + 8, ly);
+        ctx.lineTo(cx, ly + 10);
+        ctx.lineTo(cx - 8, ly);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Collectible Lumen Shards
+      this.level.shards.forEach((sh, idx) => {
+        if (this.collectedShards.has(idx)) return;
+        const sx = sh.x * TILE;
+        const sy = sh.y * TILE + Math.sin(this.globalTime * 3.5 + idx) * 5;
+
+        const glow = ctx.createRadialGradient(sx, sy, 2, sx, sy, 32);
+        glow.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 32, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(this.globalTime * 1.4);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(-7, -7, 14, 14);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-3.5, -3.5, 7, 7);
+        ctx.restore();
+      });
+
+      // Level Exit Portal / Great Beacon
+      const px = this.level.portal.x * TILE;
+      const py = (this.level.portal.y - 1.2) * TILE;
+      const portalGlow = ctx.createRadialGradient(px, py, 6, px, py, 95);
+      portalGlow.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+      portalGlow.addColorStop(0.35, 'rgba(255, 255, 255, 0.24)');
+      portalGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = portalGlow;
+      ctx.beginPath();
+      ctx.arc(px, py, 95, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 + Math.sin(this.globalTime * 4) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.rotate(-this.globalTime * 1.2);
+      ctx.strokeRect(-14, -14, 28, 28);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    renderPlayer(ctx) {
+      const p = this.player;
+
+      // Render soul wisps returning to checkpoint on death
+      this.soulWisps.forEach((w) => {
+        const wx = w.x + (w.tx - w.x) * w.t;
+        const wy = w.y + (w.ty - w.y) * w.t - Math.sin(w.t * Math.PI) * 45;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(wx, wy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (p.dead) return;
+
+      // Dash ghost afterimages
+      this.afterimages.forEach((img) => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${img.alpha * 0.45})`;
+        ctx.fillRect(img.x, img.y, img.w, img.h);
+      });
+
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+
+      // Ambient radial player lantern aura
+      const aura = ctx.createRadialGradient(cx, cy, 6, cx, cy, 135);
+      aura.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+      aura.addColorStop(0.45, 'rgba(255, 255, 255, 0.07)');
+      aura.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 135, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Flowing Scarf / Cloak Trail
+      ctx.save();
+      ctx.strokeStyle = '#e8e8f0';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let i = 0; i < p.scarf.length - 1; i++) {
+        ctx.lineWidth = Math.max(1.5, 6.5 - i * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(p.scarf[i].x, p.scarf[i].y);
+        ctx.lineTo(p.scarf[i + 1].x, p.scarf[i + 1].y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Character Body with Squash & Stretch
+      ctx.save();
+      ctx.translate(cx, p.y + p.h);
+      ctx.scale(p.scaleX, p.scaleY);
+
+      // Animated Legs
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      const stride = p.onGround ? Math.sin(p.runCycle) * 7 : 4;
+      ctx.beginPath();
+      ctx.moveTo(-4, -10);
+      ctx.lineTo(-4 + stride, -1);
+      ctx.moveTo(4, -10);
+      ctx.lineTo(4 - stride, -1);
+      ctx.stroke();
+
+      // Cloak / Torso Silhouette (dark interior with crisp white rim)
+      ctx.fillStyle = '#07070a';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-10, -8);
+      ctx.lineTo(-7, -23);
+      ctx.lineTo(7, -23);
+      ctx.lineTo(10, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Head / Hood
+      const headBob = p.onGround && Math.abs(p.vx) > 20 ? Math.abs(Math.cos(p.runCycle)) * 2 : Math.sin(this.globalTime * 3) * 1;
+      const headY = -28 - headBob;
+      ctx.fillStyle = '#07070a';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, headY, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing Expressive Eyes
+      if (!p.isBlinking) {
+        const eyeOffsetX = p.facing * 2.8;
+        const eyeH = p.dashTimer > 0 ? 1.5 : 3.2;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(eyeOffsetX - 3.2, headY - 1.5, 2.4, eyeH);
+        ctx.fillRect(eyeOffsetX + 1.2, headY - 1.5, 2.4, eyeH);
+      }
+
+      ctx.restore();
+    }
+
+    renderParticlesAndMist(ctx, viewW, viewH) {
+      // Ambient floating ash / spores
+      this.ambientParticles.forEach((pt) => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${pt.alpha})`;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Dynamic FX particles (dust, sparks, shatter)
+      this.fxParticles.forEach((pt) => {
+        ctx.fillStyle = pt.color || '#ffffff';
+        ctx.globalAlpha = Math.max(0, pt.alpha);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Bottom ground mist layer
+      if (this.level) {
+        const worldW = this.level.bounds.width * TILE;
+        const worldH = this.level.bounds.height * TILE;
+        const mistGrad = ctx.createLinearGradient(0, worldH - 150, 0, worldH);
+        mistGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        mistGrad.addColorStop(0.65, 'rgba(200, 200, 215, 0.08)');
+        mistGrad.addColorStop(1, 'rgba(235, 235, 245, 0.22)');
+        ctx.fillStyle = mistGrad;
+        ctx.fillRect(0, worldH - 150, worldW, 150);
+      }
+    }
+
+    // =========================================================================
+    // UI & MENU BINDINGS
+    // =========================================================================
+    updateHUD() {
+      if (!this.level) return;
+      document.getElementById('hud-chapter-num').textContent = this.level.numeral;
+      document.getElementById('hud-chapter-name').textContent = this.level.title;
+      document.getElementById('hud-deaths').textContent = String(this.levelDeaths);
+      document.getElementById('hud-shards').textContent = `${this.collectedShards.size}/${this.level.shards.length}`;
+
+      const dashPill = document.getElementById('pill-dash');
+      if (this.player.dashUnlocked) {
+        dashPill.classList.add('unlocked');
+        dashPill.textContent = 'Dash: Ready';
+      } else {
+        dashPill.classList.remove('unlocked');
+        dashPill.textContent = 'Dash: Ch.IV';
+      }
+    }
+
+    updateHUDTimer() {
+      const el = document.getElementById('hud-timer');
+      if (el) el.textContent = this.formatTime(this.levelTime);
+    }
+
+    updateMenuUI() {
+      const continueBtn = document.getElementById('btn-play-continue');
+      if (this.progress.unlockedIndex > 0) {
+        continueBtn.textContent = `Continue (${window.UMBRA_LEVELS[this.progress.unlockedIndex].numeral})`;
+      } else {
+        continueBtn.textContent = 'Begin Ascent';
+      }
+    }
+
+    renderLevelSelect() {
+      const grid = document.getElementById('level-select-grid');
+      grid.innerHTML = '';
+
+      window.UMBRA_LEVELS.forEach((lvl, idx) => {
+        const stats = this.progress.levels[lvl.id] || {};
+        const isUnlocked = this.progress.unlockAll || idx <= this.progress.unlockedIndex || Boolean(stats.completed);
+
+        const card = document.createElement('div');
+        card.className = 'level-card' + (stats.completed ? ' completed' : '');
+        if (!isUnlocked) {
+          card.style.opacity = '0.48';
+        }
+
+        const timeText = stats.bestTime != null ? this.formatTime(stats.bestTime) : '--:--.-';
+        const shardCount = stats.shards || 0;
+
+        card.innerHTML = `
+          <div>
+            <div class="level-card-num">${lvl.numeral} ${stats.completed ? '• COMPLETED' : (isUnlocked ? '• UNLOCKED' : '• LOCKED')}</div>
+            <div class="level-card-title">${lvl.title}</div>
+            <div class="level-card-desc">${lvl.mechanicsDesc}</div>
+          </div>
+          <div class="level-card-meta">
+            <span>✦ ${shardCount}/3 Shards</span>
+            <span>⏱ ${timeText}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          this.audio.init();
+          if (isUnlocked) {
+            this.loadLevel(idx, true);
+          } else {
+            // Allow immediate unlock if clicked or via toggle
+            this.progress.unlockAll = true;
+            this.saveProgress();
+            this.loadLevel(idx, true);
+          }
+        });
+
+        grid.appendChild(card);
+      });
+
+      const unlockToggleBtn = document.getElementById('btn-unlock-all');
+      if (unlockToggleBtn) {
+        unlockToggleBtn.textContent = this.progress.unlockAll ? 'All Chapters Unlocked ✓' : 'Unlock All Chapters';
+      }
+    }
+
+    populateLevelCompleteModal(rank) {
+      document.getElementById('complete-chapter-title').textContent = `${this.level.numeral}: ${this.level.title}`;
+      document.getElementById('complete-time').textContent = this.formatTime(this.levelTime);
+      document.getElementById('complete-deaths').textContent = String(this.levelDeaths);
+      document.getElementById('complete-shards').textContent = `${this.collectedShards.size}/3`;
+      document.getElementById('complete-rank').textContent = rank;
+    }
+
+    populateVictoryModal(rank) {
+      let totalShards = 0;
+      let totalBestTime = 0;
+      window.UMBRA_LEVELS.forEach((lvl) => {
+        const st = this.progress.levels[lvl.id];
+        if (st) {
+          totalShards += st.shards || 0;
+          totalBestTime += st.bestTime || this.levelTime;
+        }
+      });
+      document.getElementById('victory-time').textContent = this.formatTime(totalBestTime);
+      document.getElementById('victory-deaths').textContent = String(this.totalDeaths);
+      document.getElementById('victory-shards').textContent = `${totalShards}/18`;
+      document.getElementById('victory-rank').textContent = rank;
+    }
+
+    hideAllOverlays() {
+      ['menu-overlay', 'levels-overlay', 'controls-overlay', 'pause-overlay', 'complete-overlay', 'victory-overlay'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
+    togglePause() {
+      if (this.state === 'PLAYING') {
+        this.state = 'PAUSED';
+        document.getElementById('pause-overlay').classList.remove('hidden');
+      } else if (this.state === 'PAUSED') {
+        this.state = 'PLAYING';
+        document.getElementById('pause-overlay').classList.add('hidden');
+      }
+    }
+
+    handleResize() {
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.canvas.width = Math.floor(this.width * this.dpr);
+      this.canvas.height = Math.floor(this.height * this.dpr);
+      this.clampCamera();
+    }
+
+    bindEvents() {
+      window.addEventListener('resize', () => this.handleResize());
+
+      // Keyboard controls
+      window.addEventListener('keydown', (e) => {
+        this.audio.init();
+        const code = e.code;
+
+        if (code === 'Escape' || code === 'KeyP') {
+          if (this.state === 'PLAYING' || this.state === 'PAUSED') {
+            e.preventDefault();
+            this.togglePause();
+          }
+          return;
+        }
+
+        if (code === 'KeyR' && this.state === 'PLAYING') {
+          e.preventDefault();
+          this.killPlayer();
+          return;
+        }
+
+        if (code === 'KeyM') {
+          e.preventDefault();
+          this.toggleAudioMute();
+          return;
+        }
+
+        if (code === 'ArrowLeft' || code === 'KeyA') {
+          this.keys.left = true;
+        }
+        if (code === 'ArrowRight' || code === 'KeyD') {
+          this.keys.right = true;
+        }
+        if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW' || code === 'KeyZ') {
+          e.preventDefault();
+          if (!this.keys.jumpHeld) {
+            this.keys.jumpPressed = true;
+            this.player.jumpBufferTimer = JUMP_BUFFER;
+          }
+          this.keys.jumpHeld = true;
+        }
+        if (code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyX' || code === 'KeyK') {
+          e.preventDefault();
+          this.keys.dashPressed = true;
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        const code = e.code;
+        if (code === 'ArrowLeft' || code === 'KeyA') {
+          this.keys.left = false;
+        }
+        if (code === 'ArrowRight' || code === 'KeyD') {
+          this.keys.right = false;
+        }
+        if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW' || code === 'KeyZ') {
+          this.keys.jumpHeld = false;
+        }
+      });
+
+      // Main Menu Buttons
+      document.getElementById('btn-play-continue').addEventListener('click', () => {
+        this.audio.init();
+        this.loadLevel(this.progress.unlockedIndex || 0, true);
+      });
+
+      document.getElementById('btn-open-levels').addEventListener('click', () => {
+        this.audio.init();
+        this.renderLevelSelect();
+        this.hideAllOverlays();
+        document.getElementById('levels-overlay').classList.remove('hidden');
+      });
+
+      document.getElementById('btn-open-controls').addEventListener('click', () => {
+        this.audio.init();
+        this.hideAllOverlays();
+        document.getElementById('controls-overlay').classList.remove('hidden');
+      });
+
+      // Level Select Buttons
+      document.getElementById('btn-levels-back').addEventListener('click', () => {
+        this.hideAllOverlays();
+        if (this.state === 'PAUSED') {
+          document.getElementById('pause-overlay').classList.remove('hidden');
+        } else {
+          this.state = 'MENU';
+          document.getElementById('menu-overlay').classList.remove('hidden');
+        }
+      });
+
+      document.getElementById('btn-unlock-all').addEventListener('click', () => {
+        this.progress.unlockAll = !this.progress.unlockAll;
+        this.saveProgress();
+        this.renderLevelSelect();
+      });
+
+      document.getElementById('btn-reset-save').addEventListener('click', () => {
+        this.resetProgress();
+      });
+
+      // Controls Overlay Back
+      document.getElementById('btn-controls-back').addEventListener('click', () => {
+        this.hideAllOverlays();
+        if (this.state === 'PAUSED') {
+          document.getElementById('pause-overlay').classList.remove('hidden');
+        } else {
+          this.state = 'MENU';
+          document.getElementById('menu-overlay').classList.remove('hidden');
+        }
+      });
+
+      // HUD Top Buttons
+      document.getElementById('btn-hud-pause').addEventListener('click', () => {
+        this.audio.init();
+        this.togglePause();
+      });
+
+      document.getElementById('btn-hud-restart').addEventListener('click', () => {
+        this.audio.init();
+        if (this.state === 'PLAYING') {
+          this.respawnPlayer(false);
+        }
+      });
+
+      document.getElementById('btn-hud-mute').addEventListener('click', () => {
+        this.toggleAudioMute();
+      });
+
+      document.getElementById('btn-hud-touch').addEventListener('click', () => {
+        const tc = document.getElementById('touch-controls');
+        tc.classList.toggle('hidden');
+      });
+
+      // Pause Menu Buttons
+      document.getElementById('btn-pause-resume').addEventListener('click', () => {
+        this.togglePause();
+      });
+
+      document.getElementById('btn-pause-checkpoint').addEventListener('click', () => {
+        this.togglePause();
+        this.respawnPlayer(false);
+      });
+
+      document.getElementById('btn-pause-restart-level').addEventListener('click', () => {
+        this.loadLevel(this.currentLevelIdx, true);
+      });
+
+      document.getElementById('btn-pause-levels').addEventListener('click', () => {
+        this.renderLevelSelect();
+        this.hideAllOverlays();
+        document.getElementById('levels-overlay').classList.remove('hidden');
+      });
+
+      document.getElementById('btn-pause-scanlines').addEventListener('click', (e) => {
+        this.scanlinesEnabled = !this.scanlinesEnabled;
+        const layer = document.getElementById('scanline-layer');
+        layer.classList.toggle('disabled', !this.scanlinesEnabled);
+        e.currentTarget.textContent = `Film Scanlines: ${this.scanlinesEnabled ? 'On' : 'Off'}`;
+      });
+
+      document.getElementById('btn-pause-menu').addEventListener('click', () => {
+        this.state = 'MENU';
+        this.hideAllOverlays();
+        document.getElementById('hud-bar').classList.add('hidden');
+        this.updateMenuUI();
+        document.getElementById('menu-overlay').classList.remove('hidden');
+      });
+
+      // Level Complete Buttons
+      document.getElementById('btn-next-level').addEventListener('click', () => {
+        const nextIdx = Math.min(window.UMBRA_LEVELS.length - 1, this.currentLevelIdx + 1);
+        this.loadLevel(nextIdx, true);
+      });
+
+      document.getElementById('btn-complete-replay').addEventListener('click', () => {
+        this.loadLevel(this.currentLevelIdx, true);
+      });
+
+      document.getElementById('btn-complete-levels').addEventListener('click', () => {
+        this.state = 'MENU';
+        this.renderLevelSelect();
+        this.hideAllOverlays();
+        document.getElementById('levels-overlay').classList.remove('hidden');
+      });
+
+      // Victory Buttons
+      document.getElementById('btn-victory-replay').addEventListener('click', () => {
+        this.loadLevel(0, true);
+      });
+
+      document.getElementById('btn-victory-levels').addEventListener('click', () => {
+        this.state = 'MENU';
+        this.renderLevelSelect();
+        this.hideAllOverlays();
+        document.getElementById('levels-overlay').classList.remove('hidden');
+      });
+
+      // Touch Controls Bindings
+      this.bindTouchButton('touch-left', () => { this.keys.left = true; }, () => { this.keys.left = false; });
+      this.bindTouchButton('touch-right', () => { this.keys.right = true; }, () => { this.keys.right = false; });
+      this.bindTouchButton('touch-jump', () => {
+        this.keys.jumpPressed = true;
+        this.keys.jumpHeld = true;
+        this.player.jumpBufferTimer = JUMP_BUFFER;
+      }, () => {
+        this.keys.jumpHeld = false;
+      });
+      this.bindTouchButton('touch-dash', () => {
+        this.keys.dashPressed = true;
+      }, () => {});
+
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.getElementById('touch-controls').classList.remove('hidden');
+      }
+    }
+
+    bindTouchButton(id, onDown, onUp) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const start = (e) => {
+        e.preventDefault();
+        this.audio.init();
+        btn.classList.add('pressed');
+        onDown();
+      };
+      const end = (e) => {
+        e.preventDefault();
+        btn.classList.remove('pressed');
+        onUp();
+      };
+      btn.addEventListener('pointerdown', start);
+      btn.addEventListener('pointerup', end);
+      btn.addEventListener('pointerleave', end);
+      btn.addEventListener('pointercancel', end);
+    }
+
+    toggleAudioMute() {
+      const muted = this.audio.toggleMute();
+      const hudBtn = document.getElementById('btn-hud-mute');
+      if (hudBtn) hudBtn.textContent = muted ? 'Sound: Off' : 'Sound: On';
+    }
+
+    loop(timestamp) {
+      const rawDt = (timestamp - this.lastFrameTime) / 1000;
+      this.lastFrameTime = timestamp;
+      const dt = Math.min(0.033, Math.max(0.001, rawDt));
+
+      this.update(dt);
+      this.render();
+
+      requestAnimationFrame((t) => this.loop(t));
+    }
+  }
+
+  window.addEventListener('load', () => {
+    window.umbraGame = new UmbraGame();
+  });
+})();
+
+  </script>
+</body>
+</html>

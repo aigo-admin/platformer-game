@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NOCTURNE — Monochrome Platformer</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="app">
+  <header><div class="brand"><span class="mark">◐</span><div><strong>NOCTURNE</strong><small> A quiet journey through the dark</small></div></div><div class="header-right"><span id="levelLabel">CHAPTER 01</span><button id="soundBtn" aria-label="Toggle sound">SOUND ON</button></div></header>
+  <main>
+    <section class="game-shell"><canvas id="game" width="960" height="540" aria-label="Platform game"></canvas>
+      <div id="overlay" class="overlay">
+        <div class="overlay-card"><p class="eyebrow" id="overlayEyebrow">A MONOCHROME PLATFORMER</p><h1 id="overlayTitle">The space<br><em>between</em></h1><p id="overlayText">Find the light. Keep moving.</p><button id="overlayAction">BEGIN JOURNEY <span>→</span></button><div class="hint">MOVE <b>A / D</b> OR <b>← / →</b> &nbsp; JUMP <b>SPACE / W / ↑</b></div></div>
+      </div>
+      <div id="hud" class="hud hidden"><div class="hud-left"><span class="hud-dot"></span><span id="hudLevel">01 / 05</span><span class="separator">/</span><span id="hudName">THE THRESHOLD</span></div><div class="hud-right"><span id="deaths">0 FALLS</span><button id="pauseBtn">Ⅱ</button></div></div>
+      <div id="toast" class="toast"></div>
+    </section>
+    <nav class="bottom-bar"><button id="levelsBtn">LEVELS <span>＋</span></button><div class="progress-track"><div id="progressFill"></div></div><span id="progressText">0 / 5</span><button id="restartBtn">RESTART <span>↻</span></button></nav>
+    <section id="levelPanel" class="level-panel hidden"><div class="panel-head"><div><p class="eyebrow">SELECT A CHAPTER</p><h2>Choose your path</h2></div><button id="closeLevels">×</button></div><div id="levelGrid" class="level-grid"></div></section>
+    <footer><span>WASD / ARROWS TO MOVE · SPACE TO JUMP</span><span>ESC TO PAUSE · R TO RESTART</span></footer>
+  </main>
+</div><script src="game.js"></script>
+</body></html>
